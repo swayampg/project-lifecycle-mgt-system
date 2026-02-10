@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './Login';
 import Signup from './Signup'; // 🔹 Import the new Signup page
+import ResetPassword from './ResetPassword'; // 🔹 Import Reset Password page
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
@@ -13,6 +14,9 @@ function App() {
 
         {/* This is the Signup page */}
         <Route path="/signup" element={<Signup />} />
+
+        {/* This is the Reset Password page */}
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Placeholder for your Dashboard. 
             Once you create Dashboard.js, you can uncomment the line below.

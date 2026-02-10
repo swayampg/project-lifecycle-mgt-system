@@ -18,7 +18,7 @@ const Login = () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       alert("Login Successful!");
-      navigate('/dashboard'); 
+      navigate('/dashboard');
     } catch (error) {
       alert("Login Failed: " + error.message);
     }
@@ -32,56 +32,61 @@ const Login = () => {
 
       <div className="login-card">
         <h1 className="welcome-text">Welcome !</h1>
-        
+
         {/* 7. Add onSubmit to the form */}
         <form onSubmit={handleLogin}>
           <div className="mb-3 text-start">
             <label className="fw-bold small text-secondary">Email Address</label>
-            <input 
-              type="email" 
-              className="form-control bg-light border-0" 
-              placeholder="Enter your email" 
+            <input
+              type="email"
+              className="form-control bg-light border-0"
+              placeholder="Enter your email"
               onChange={(e) => setEmail(e.target.value)} // Update email state
-              required 
+              required
             />
           </div>
 
           <div className="mb-1 text-start">
             <label className="fw-bold small text-secondary">Password</label>
             <div className="input-group">
-                <input 
-                  type="password" 
-                  className="form-control bg-light border-0" 
-                  placeholder="********" 
-                  onChange={(e) => setPassword(e.target.value)} // Update password state
-                  required 
-                />
-                <span className="input-group-text bg-light border-0">👁️</span>
+              <input
+                type="password"
+                className="form-control bg-light border-0"
+                placeholder="********"
+                onChange={(e) => setPassword(e.target.value)} // Update password state
+                required
+              />
+              <span className="input-group-text bg-light border-0">👁️</span>
             </div>
           </div>
 
-          <p className="text-muted mb-4 text-start" style={{fontSize: '11px'}}>
+          <p className="text-muted mb-4 text-start" style={{ fontSize: '11px' }}>
             It must be a combination of minimum 8 letters, numbers, and symbols.
           </p>
-          
-          <button type="submit" className="btn w-100 fw-bold text-white" style={{backgroundColor: '#1a4d8c', padding: '12px'}}>
+
+          <button type="submit" className="btn w-100 fw-bold text-white" style={{ backgroundColor: '#1a4d8c', padding: '12px' }}>
             Log In
           </button>
 
           <div className="text-center mt-3">
             <p className="small">
-                <span className="text-muted">Don't have an account? </span>
-                <button 
-                  type="button" 
-                  className="btn btn-link p-0 fw-bold text-decoration-none" 
-                  style={{color: '#1a4d8c', fontSize: '13px'}}
-                  onClick={() => navigate('/signup')} // 🔹 This will now work!
-                >
-                    Sign Up
-                </button>
+              <span className="text-muted">Don't have an account? </span>
+              <button
+                type="button"
+                className="btn btn-link p-0 fw-bold text-decoration-none"
+                style={{ color: '#1a4d8c', fontSize: '13px' }}
+                onClick={() => navigate('/signup')} // 🔹 This will now work!
+              >
+                Sign Up
+              </button>
             </p>
-            <button type="button" className="btn btn-link p-0 text-muted text-decoration-none" style={{fontSize: '12px'}}>
-                Forgot Password?
+            <button
+              type="button"
+              className="btn btn-link p-0 text-muted text-decoration-none"
+              style={{ fontSize: '12px' }}
+              onClick={() => navigate('/reset-password')}
+            >
+              Forgot Password?
             </button>
           </div>
         </form>
@@ -90,7 +95,7 @@ const Login = () => {
       {/* Branding Logo at bottom left */}
       <div className="brand-footer">
         <div className="logo-placeholder">LOGO</div>
-        <p className="brand-name">Project Lifecycle<br/>Management System</p>
+        <p className="brand-name">Project Lifecycle<br />Management System</p>
       </div>
     </div>
   );
