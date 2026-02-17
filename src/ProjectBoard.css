@@ -1,0 +1,217 @@
+/* Project Board Container */
+.project-board-container {
+    background-color: #f4f7fe;
+    min-height: 100vh;
+    padding-bottom: 120px;
+}
+
+/* Header styles removed, now using Header.css */
+
+/* Board Area */
+.board-wrapper {
+    margin: 20px;
+    padding: 30px;
+    background: white;
+    border-radius: 12px;
+    border: 2px dotted #4facfe;
+    /* Dotted blue border as requested */
+    min-height: 70vh;
+    position: relative;
+    overflow-x: auto;
+}
+
+.board-columns {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+/* Column Design */
+.board-column {
+    width: 250px;
+    flex-shrink: 0;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #4facfe;
+    /* Blue borders for column */
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.column-header {
+    background-color: #1a4d8c;
+    color: white;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.column-header h6 {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.column-body {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Add Task Button */
+.add-task-btn {
+    background: white;
+    border: 1px solid #1a4d8c;
+    color: #1a4d8c;
+    border-radius: 6px;
+    padding: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.add-task-btn:hover {
+    background: #f0f7ff;
+}
+
+/* Task Item */
+.task-item {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #444;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.task-item:hover {
+    background-color: #f8fbff;
+}
+
+.task-item.completed span {
+    text-decoration: line-through;
+    color: #888;
+}
+
+.status-circle {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #1a4d8c;
+    border-radius: 50%;
+    cursor: pointer;
+    background-color: white;
+    transition: background-color 0.2s;
+}
+
+.task-item.completed .status-circle {
+    background-color: #1a4d8c;
+}
+
+/* Add Phase Button */
+.add-phase-container {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+}
+
+.btn-add-phase {
+    background-color: #1a4d8c;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(26, 77, 140, 0.3);
+    transition: transform 0.2s;
+}
+
+.btn-add-phase:hover {
+    transform: scale(1.05);
+}
+
+/* Simple Modal Styling */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.modal-header h5 {
+    margin: 0;
+    color: #1a4d8c;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.description-text {
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
