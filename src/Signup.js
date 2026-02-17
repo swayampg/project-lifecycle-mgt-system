@@ -1,23 +1,39 @@
 import React, { useState } from 'react';
-import { auth } from './firebaseConfig';
+import { auth, db } from './firebaseConfig'; 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'; 
 import { useNavigate } from 'react-router-dom';
-import './Login.css'; // We can reuse the same CSS!
+import './Login.css';
 
 const Signup = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const navigate = useNavigate();
     const [fullName, setFullName] = useState('');
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     const handleSignup = async (e) => {
         e.preventDefault();
+        setLoading(true);
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
+            // 1. Create user in Auth
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            // 2. Create the User Profile in Firestore
+            await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                fullName: fullName,
+                email: email,
+                createdAt: serverTimestamp()
+            });
+
             alert("Account Created Successfully!");
-            navigate('/'); // Take them back to Login to sign in
+            navigate('/'); 
         } catch (error) {
             alert("Signup Failed: " + error.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -33,7 +49,7 @@ const Signup = () => {
                         <input
                             type="text"
                             className="form-control bg-light border-0"
-                            placeholder="Enter username"
+                            placeholder="Enter your name"
                             onChange={(e) => setFullName(e.target.value)}
                             required
                         />
@@ -48,12 +64,19 @@ const Signup = () => {
                             required
                         />
                     </div>
+                    
                     <div className="mb-3 text-start">
                         <label className="fw-bold small text-secondary">Password</label>
-                        <input type="password" className="form-control bg-light border-0" placeholder="********" onChange={(e) => setPassword(e.target.value)} required />
+                        <input 
+                            type="password" 
+                            className="form-control bg-light border-0" 
+                            placeholder="********" 
+                            onChange={(e) => setPassword(e.target.value)} 
+                            required 
+                        />
                     </div>
-                    <button type="submit" className="btn w-100 fw-bold text-white" style={{ backgroundColor: '#1a4d8c' }}>
-                        Create Account
+                    <button type="submit" disabled={loading} className="btn w-100 fw-bold text-white" style={{ backgroundColor: '#1a4d8c' }}>
+                        {loading ? "Creating Account..." : "Create Account"}
                     </button>
                     <button type="button" className="btn btn-link w-100 mt-2 text-decoration-none text-muted" onClick={() => navigate('/')}>
                         Already have an account? Login
