@@ -51,6 +51,39 @@
     margin: 0;
     font-size: 0.85rem;
     font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 150px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.edit-phase-input-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+}
+
+.edit-phase-input {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 0.8rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+    width: 80%;
+    outline: none;
+}
+
+.edit-phase-input:focus {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: white;
 }
 
 .column-body {

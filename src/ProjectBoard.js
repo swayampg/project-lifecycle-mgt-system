@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './ProjectBoard.css';
-import { Plus, Minus, X } from 'lucide-react';
+import { Plus, Minus, X, Edit2, Check } from 'lucide-react';
 import BottomNav from './BottomNav';
 import Header from './Header';
 
@@ -16,15 +16,19 @@ const ProjectBoard = () => {
                 { id: 't3', name: 'Sample task', description: 'This is a sample task description.', completed: false }
             ]
         },
-        { id: 2, title: 'Demo', tasks: [] },
-        { id: 3, title: 'Demo', tasks: [] }
+        { id: 2, title: 'Requirement Analysis', tasks: [] },
+        { id: 3, title: 'Design', tasks: [] }
     ]);
 
-    // 2. STATE FOR MODALS
+    // 2. STATE FOR MODALS AND EDITING
     const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
     const [isViewTaskModalOpen, setIsViewTaskModalOpen] = useState(false);
     const [currentPhaseId, setCurrentPhaseId] = useState(null);
     const [currentTask, setCurrentTask] = useState(null);
+
+    // Rename state
+    const [editingPhaseId, setEditingPhaseId] = useState(null);
+    const [editPhaseTitle, setEditPhaseTitle] = useState('');
 
     // Form state for adding task
     const [newTaskName, setNewTaskName] = useState('');
@@ -45,6 +49,22 @@ const ProjectBoard = () => {
         if (window.confirm("Are you sure you want to remove this phase?")) {
             setPhases(phases.filter(p => p.id !== phaseId));
         }
+    };
+
+    const startEditing = (phaseId, currentTitle) => {
+        setEditingPhaseId(phaseId);
+        setEditPhaseTitle(currentTitle);
+    };
+
+    const saveRename = (phaseId) => {
+        if (!editPhaseTitle.trim()) return;
+        setPhases(phases.map(p => p.id === phaseId ? { ...p, title: editPhaseTitle } : p));
+        setEditingPhaseId(null);
+    };
+
+    const cancelEditing = () => {
+        setEditingPhaseId(null);
+        setEditPhaseTitle('');
     };
 
     // --- TASK ACTIONS ---
@@ -105,12 +125,42 @@ const ProjectBoard = () => {
                     {phases.map((phase) => (
                         <div key={phase.id} className="board-column">
                             <div className="column-header">
-                                <h6>{phase.title}</h6>
-                                <Minus
-                                    size={14}
-                                    className="cursor-pointer"
-                                    onClick={() => handleRemovePhase(phase.id)}
-                                />
+                                {editingPhaseId === phase.id ? (
+                                    <div className="edit-phase-input-group">
+                                        <input
+                                            type="text"
+                                            className="edit-phase-input"
+                                            value={editPhaseTitle}
+                                            onChange={(e) => setEditPhaseTitle(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') saveRename(phase.id);
+                                                if (e.key === 'Escape') cancelEditing();
+                                            }}
+                                            autoFocus
+                                        />
+                                        <Check
+                                            size={14}
+                                            className="cursor-pointer"
+                                            onClick={() => saveRename(phase.id)}
+                                        />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <h6>{phase.title}</h6>
+                                        <div className="header-actions">
+                                            <Edit2
+                                                size={14}
+                                                className="cursor-pointer"
+                                                onClick={() => startEditing(phase.id, phase.title)}
+                                            />
+                                            <Minus
+                                                size={14}
+                                                className="cursor-pointer"
+                                                onClick={() => handleRemovePhase(phase.id)}
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             </div>
                             <div className="column-body">
                                 <button
