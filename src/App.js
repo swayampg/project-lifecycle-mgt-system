@@ -5,6 +5,7 @@ import Signup from './Signup'; // 🔹 Import the new Signup page
 import ResetPassword from './ResetPassword'; // 🔹 Import Reset Password page
 import Home from './Home';
 import CreateProject from './CreateProject';
+import ProjectBoard from './ProjectBoard';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -21,11 +22,13 @@ function App() {
         {/* This is the Reset Password page */}
         <Route path="/reset-password" element={<ResetPassword />} />
 
-            <Route path="/home" element={<Home />} />
+        <Route path="/home" element={<Home />} />
 
-        <Route path="/" element={<CreateProject />} />
+        <Route path="/CreateProject" element={<CreateProject />} />
 
-        
+        <Route path="/project-board" element={<ProjectBoard />} />
+
+
 
         {/* Placeholder for your Dashboard. 
             Once you create Dashboard.js, you can uncomment the line below.

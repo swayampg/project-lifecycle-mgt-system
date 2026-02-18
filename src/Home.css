@@ -1,16 +1,13 @@
 /* Dashboard Container */
 .dashboard-container {
-    background-color: #f4f7fe; /* Light grey/blue background like the image */
+    background-color: #f4f7fe;
+    /* Light grey/blue background like the image */
     min-height: 100vh;
-    padding-bottom: 100px; /* Space for the floating bottom menu */
+    padding-bottom: 100px;
+    /* Space for the floating bottom menu */
 }
 
-/* Header Section */
-.top-nav {
-    background-color: #1a4d8c; /* Dark blue header */
-    color: white;
-    padding: 10px 20px;
-}
+/* Header styles removed, now using Header.css */
 
 .profile-section img {
     width: 45px;
@@ -24,7 +21,7 @@
     background: white;
     border-radius: 15px;
     border: none;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
     transition: transform 0.2s;
 }
 
@@ -52,33 +49,4 @@
     align-items: center;
     justify-content: center;
     color: #888;
-}
-
-/* Bottom Floating Menu */
-.bottom-nav {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #1a4d8c;
-    padding: 10px 30px;
-    border-radius: 15px;
-    display: flex;
-    gap: 20px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-}
-
-.nav-item {
-    background-color: #c0c0c0; /* Grey buttons in image */
-    padding: 8px 25px;
-    border-radius: 8px;
-    cursor: pointer;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.nav-item.active {
-    background-color: white; /* Active home button is white */
 }

@@ -1,0 +1,36 @@
+/* Shared Bottom Floating Navigation */
+.bottom-nav-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #1a4d8c;
+    padding: 12px 30px;
+    border-radius: 20px;
+    display: flex;
+    gap: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+.bottom-nav-btn {
+    background-color: #a5b6cc;
+    /* Greyish color from image */
+    border: none;
+    padding: 8px 25px;
+    border-radius: 8px;
+    color: #1a4d8c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.bottom-nav-btn.active {
+    background-color: white;
+}
+
+.bottom-nav-btn:hover:not(.active) {
+    background-color: #cbd5e0;
+}

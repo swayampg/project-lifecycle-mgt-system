@@ -1,0 +1,53 @@
+/* Shared Top Navigation Header */
+.main-header {
+    background-color: #1a4d8c;
+    color: white;
+    padding: 12px 30px;
+}
+
+.header-profile-section img {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    object-fit: cover;
+}
+
+.header-search-box {
+    max-width: 400px;
+    width: 100%;
+}
+
+.header-search-box .input-group-text {
+    background: white;
+    border-right: none;
+    color: #888;
+}
+
+.header-search-box input {
+    border-left: none;
+}
+
+.header-actions .header-icon {
+    color: white;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.header-actions .header-icon:hover {
+    opacity: 0.8;
+}
+
+/* Responsiveness adjustments */
+@media (max-width: 768px) {
+    .main-header {
+        padding: 10px 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .header-search-box {
+        order: 3;
+        max-width: 100%;
+    }
+}
