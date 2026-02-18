@@ -11,6 +11,7 @@ const Login = () => {
   // 5. Setup "States" to hold the user's input
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // 6. Function to handle the Log In button click
   const handleLogin = async (e) => {
@@ -50,13 +51,19 @@ const Login = () => {
             <label className="fw-bold small text-secondary">Password</label>
             <div className="input-group">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 className="form-control bg-light border-0"
                 placeholder="********"
                 onChange={(e) => setPassword(e.target.value)} // Update password state
                 required
               />
-              <span className="input-group-text bg-light border-0">👁️</span>
+              <span
+                className="input-group-text bg-light border-0"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ cursor: 'pointer' }}
+              >
+                {showPassword ? "👁️‍🗨️" : "👁️"}
+              </span>
             </div>
           </div>
 
