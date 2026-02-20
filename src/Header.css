@@ -13,6 +13,10 @@
     object-fit: cover;
 }
 
+.cursor-pointer {
+    cursor: pointer;
+}
+
 .header-search-box {
     max-width: 400px;
     width: 100%;
