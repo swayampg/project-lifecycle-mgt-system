@@ -1,0 +1,163 @@
+/* Ensure the whole page takes up the full screen */
+.plm-dashboard-container {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    font-family: sans-serif;
+}
+
+/* Force the Top Blue Nav Bar */
+.plm-top-nav {
+    background-color: #1a4d8c !important;
+    /* Deep blue from your image */
+    color: white;
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.plm-user-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.plm-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+/* The Search Bar in the header */
+.plm-search-container {
+    background: white;
+    border-radius: 5px;
+    padding: 5px 15px;
+    display: flex;
+    align-items: center;
+}
+
+.plm-search-container input {
+    border: none;
+    outline: none;
+    margin-left: 10px;
+}
+
+/* The White Box Area */
+.plm-content-area {
+    padding: 40px;
+}
+
+.timeline-title {
+    color: #1a4d8c;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+/* The Cards styling */
+.timeline-card {
+    background: white;
+    border-radius: 15px;
+    display: flex;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    /* Slightly wider */
+    overflow: hidden;
+    border: 1px solid #e0e0e0;
+}
+
+.card-blue-accent {
+    width: 10px;
+    background-color: #1a4d8c;
+}
+
+.card-body-content {
+    padding: 20px;
+    flex-grow: 1;
+}
+
+.card-project-title {
+    color: #1a4d8c;
+    margin: 0;
+}
+
+.card-project-desc {
+    color: #555;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.card-stats-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+    height: 10px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background-color: #1a4d8c;
+    transition: width 0.3s ease;
+}
+
+.stats-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.progress-percentText {
+    color: #1a4d8c;
+    font-weight: bold;
+}
+
+.no-data-msg {
+    color: #666;
+    font-style: italic;
+    padding: 20px;
+    text-align: center;
+}
+
+/* The Bottom Blue Nav Pill */
+.plm-bottom-nav {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.plm-nav-pill {
+    background-color: #1a4d8c;
+    padding: 10px 50px;
+    border-radius: 20px;
+    display: flex;
+    gap: 40px;
+}
+
+.plm-nav-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.plm-nav-btn.active {
+    background: white;
+    color: #1a4d8c;
+    border-radius: 5px;
+    padding: 2px 8px;
+}

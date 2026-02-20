@@ -24,7 +24,10 @@ const BottomNav = () => {
             >
                 <Layers size={20} />
             </button>
-            <button className="bottom-nav-btn">
+            <button
+                className={`bottom-nav-btn ${isActive('/Progress') ? 'active' : ''}`}
+                onClick={() => navigate('/Progress')}
+            >
                 <Activity size={20} />
             </button>
             <button className="bottom-nav-btn">
