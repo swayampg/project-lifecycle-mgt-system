@@ -6,11 +6,11 @@ import ResetPassword from './ResetPassword'; // 🔹 Import Reset Password page
 import Home from './Home';
 import CreateProject from './CreateProject';
 import ProjectBoard from './ProjectBoard';
-
 import Profile from './Profile';
-
 import Mytask from './Mytask';
 import ProfileOverview from './ProfileOverview';
+import Notifications from './Notifications';
+
 
 
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -41,7 +41,7 @@ function App() {
         <Route path="/Mytask" element={<Mytask />} />
 
         <Route path="/profile-overview" element={<ProfileOverview />} />
-
+        <Route path="/Notifications" element={<Notifications />} />
 
 
         {/* Placeholder for your Dashboard. 
