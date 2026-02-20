@@ -148,7 +148,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -162,6 +162,120 @@
     width: 90%;
     max-width: 400px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Add Task Modal Specific */
+.add-task-modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 700px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.add-task-modal-header {
+    background-color: #1a4d8c;
+    color: white;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.add-task-modal-body {
+    padding: 20px;
+    display: flex;
+    gap: 30px;
+}
+
+.form-left-column {
+    flex: 1.2;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-right-column {
+    flex: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+.form-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-field label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #444;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+    padding: 10px 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    border-color: #1a4d8c;
+}
+
+.priority-field {
+    width: 50%;
+}
+
+.add-task-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 20px;
+}
+
+.create-task-btn {
+    background-color: #1a4d8c;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 25px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.create-task-btn:hover {
+    background-color: #153e70;
+}
+
+.modal-close-icon {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    color: white;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.modal-close-icon:hover {
+    opacity: 1;
 }
 
 .modal-header {
