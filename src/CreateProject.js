@@ -3,8 +3,12 @@ import { Plus } from 'lucide-react';
 import './CreateProject.css';
 import Header from './Header';
 import BottomNav from './BottomNav';
+import { db } from './firebaseConfig';
+import { collection, addDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 
 const CreateProject = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     projectTitle: '',
     projectLeader: '',
@@ -33,8 +37,30 @@ const CreateProject = () => {
     }
 
     console.log('Project Data to be passed to DB:', formData);
-    alert('Project created successfully (check console for data)');
-    // In future, database call logic goes here
+
+    const saveProject = async () => {
+      try {
+        const proj_id = Date.now().toString();
+        await addDoc(collection(db, "projects"), {
+          proj_id: proj_id,
+          Name: formData.projectTitle,
+          projectLeader: formData.projectLeader,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          description: formData.description,
+          category: formData.category,
+          department: formData.department,
+          createdAt: new Date()
+        });
+        alert('Project created successfully!');
+        navigate('/Home');
+      } catch (error) {
+        console.error("Error adding document: ", error);
+        alert('Error creating project. Please try again.');
+      }
+    };
+
+    saveProject();
   };
 
   return (

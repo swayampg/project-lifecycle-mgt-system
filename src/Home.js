@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db } from './firebaseConfig';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import './Home.css';
 // 🔹 MAKE SURE TO INSTALL: npm install lucide-react (for icons)
 import { Plus, Folder, CheckSquare } from 'lucide-react';
@@ -8,6 +10,20 @@ import Header from './Header';
 
 const Home = () => {
     const navigate = useNavigate();
+    const [projects, setProjects] = useState([]);
+
+    useEffect(() => {
+        const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const projectsArray = [];
+            querySnapshot.forEach((doc) => {
+                projectsArray.push({ id: doc.id, ...doc.data() });
+            });
+            setProjects(projectsArray);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     return (
         <div className="dashboard-container">
@@ -37,7 +53,7 @@ const Home = () => {
                             </div>
                             <div>
                                 <div className="small text-muted fw-bold">Total Projects</div>
-                                <div className="h5 mb-0">0</div>
+                                <div className="h5 mb-0">{projects.length}</div>
                             </div>
                         </div>
                     </div>
@@ -58,7 +74,35 @@ const Home = () => {
 
                 {/* --- MAIN DISPLAY AREA --- */}
                 <div className="project-area mt-4">
-                    <h5>Your Projects Will Appear here</h5>
+                    {projects.length > 0 ? (
+                        <div className="project-list w-100 p-4">
+                            <h5 className="mb-4">Your Projects</h5>
+                            <div className="row g-4">
+                                {projects.map((project) => (
+                                    <div key={project.id} className="col-md-6 col-lg-4">
+                                        <div
+                                            className="project-item-card p-3 shadow-sm border rounded-3 bg-white cursor-pointer"
+                                            onClick={() => navigate('/ProjectBoard')}
+                                        >
+                                            <div className="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 className="project-name mb-0 text-primary">{project.Name}</h6>
+                                                <span className="badge bg-light text-dark small">{project.category}</span>
+                                            </div>
+                                            <div className="text-muted small mb-2">
+                                                <strong>Leader:</strong> {project.projectLeader}
+                                            </div>
+                                            <div className="d-flex justify-content-between small text-muted">
+                                                <span><strong>Start:</strong> {project.startDate}</span>
+                                                <span><strong>End:</strong> {project.endDate}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <h5>Your Projects Will Appear here</h5>
+                    )}
                 </div>
             </div>
 
