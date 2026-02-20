@@ -1,127 +1,234 @@
 .profile-wrapper {
     min-height: 100vh;
     background-color: #f8fafc;
-    padding-bottom: 80px;
+    padding-bottom: 100px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .profile-main {
-    margin-top: 20px;
+    margin-top: 30px;
 }
 
 .section-title {
-    font-weight: 700;
-    color: #0f172a;
-    font-size: 2rem;
+    font-weight: 800;
+    color: #1a202c;
+    font-size: 2.2rem;
+    letter-spacing: -0.5px;
 }
 
-.profile-card {
+/* Horizontal Profile Card */
+.profile-card.horizontal-layout {
     background: white;
     border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
-.avatar-placeholder {
-    width: 140px;
-    height: 140px;
-    background-color: #1e40af;
+.border-end-light {
+    border-right: 1px solid #f1f5f9;
+}
+
+.avatar-placeholder.large-avatar {
+    width: 180px;
+    height: 180px;
+    background-color: #1e4d8c;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.user-name {
-    font-weight: 800;
-    font-size: 1.75rem;
-    color: #0f172a;
-}
-
-.detail-item label {
-    display: block;
+.profile-user-name {
     font-weight: 700;
-    font-size: 1.15rem;
-    color: #0f172a;
-    margin-bottom: 4px;
+    font-size: 2.5rem;
+    color: #000;
+    margin-top: 20px;
 }
 
-.detail-item p {
-    color: #64748b;
-    font-size: 1rem;
+/* Detail Styles Matching Image */
+.image-style-details {
+    padding-left: 10px;
+}
+
+.img-detail-item {
+    margin-bottom: 25px;
+}
+
+.img-detail-item label {
+    display: block;
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: #111;
+    margin-bottom: 2px;
+}
+
+.img-detail-item p {
+    color: #94a3b8;
+    font-size: 1.1rem;
+    font-weight: 500;
     margin-bottom: 8px;
 }
 
-.detail-item hr {
-    margin: 10px 0;
-    border-color: #f1f5f9;
+.img-detail-item hr {
+    margin: 0;
+    border-color: #e2e8f0;
     opacity: 1;
 }
 
+.card-footer-line {
+    height: 2px;
+    background-color: #e2e8f0;
+    margin: 20px 40px;
+    border-radius: 1px;
+}
+
 .edit-profile-btn {
-    background-color: #1e40af;
+    background: #1e4d8c;
     border: none;
-    padding: 10px 24px;
+    padding: 12px 28px;
     border-radius: 8px;
     font-weight: 600;
+    transition: all 0.2s;
 }
 
 .edit-profile-btn:hover {
-    background-color: #1e3a8a;
+    background: #1e3a8a;
+    transform: translateY(-1px);
 }
 
-/* Modal Styles */
+/* Glassmorphism Modal */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1050;
-    backdrop-filter: blur(2px);
+    z-index: 2000;
 }
 
 .edit-modal-content {
     background: white;
-    width: 90%;
-    max-width: 450px;
+    width: 95%;
+    max-width: 600px;
     border-radius: 16px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.modal-header {
+    background: #f8fafc;
+    padding: 16px 24px;
+    border-bottom: 1px solid #edf2f7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 70px;
+}
+
+.modal-title {
+    font-weight: 800;
+    color: #1a202c;
+    font-size: 1.35rem;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
 }
 
 .btn-close-custom {
-    background: none;
+    background: transparent;
     border: none;
     color: #64748b;
     cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.btn-close-custom:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+}
+
+.form-label {
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    color: #475569 !important;
+    font-size: 0.85rem;
+    font-weight: 700;
 }
 
 .form-control,
 .form-select {
-    padding: 12px;
-    border-color: #e2e8f0;
-    border-radius: 8px;
+    width: 100%;
+    border-radius: 12px;
+    padding: 14px 20px;
+    border: 1.5px solid #e2e8f0;
+    background-color: #fff;
+    font-weight: 500;
+    color: #1e293b;
+    transition: all 0.2s ease;
+    height: 56px;
+    font-size: 1rem;
 }
 
 .form-control:focus,
 .form-select:focus {
-    border-color: #1e40af;
-    box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
+    border-color: #1e4d8c;
+    box-shadow: 0 0 0 4px rgba(30, 77, 140, 0.08);
+    background-color: #fff;
+    outline: none;
 }
 
-@media (min-width: 768px) {
-    .border-end-md {
-        border-right: 1px solid #f1f5f9 !important;
-    }
+.form-control::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.save-btn {
+    width: 100%;
+    height: 54px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    background: #1e4d8c;
+    border: none;
+    color: white;
+    box-shadow: 0 4px 12px rgba(30, 77, 140, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.save-btn:hover {
+    background: #163a6a;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(30, 77, 140, 0.3);
+}
+
+.save-btn:active {
+    transform: translateY(0);
 }
 
 .animate-fade-in {
-    animation: fadeIn 0.4s ease-out;
+    animation: profileFadeIn 0.5s ease-out;
 }
 
-@keyframes fadeIn {
+@keyframes profileFadeIn {
     from {
         opacity: 0;
         transform: translateY(10px);

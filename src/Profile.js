@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, auth } from './firebaseConfig';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Edit2, X, User } from 'lucide-react';
+import { Edit2, X, User, Building, CreditCard } from 'lucide-react';
 import Header from './Header';
 import BottomNav from './BottomNav';
 import './Profile.css';
@@ -29,8 +29,10 @@ const Profile = () => {
             const docRef = doc(db, "users", uid);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                setUserData(docSnap.data());
-                setEditData(docSnap.data());
+                const data = docSnap.data();
+                const userEmail = auth.currentUser?.email || '';
+                setUserData({ ...data, email: userEmail });
+                setEditData({ ...data, email: userEmail });
             }
         } catch (error) {
             console.error("Error fetching user data:", error);
@@ -80,53 +82,61 @@ const Profile = () => {
 
             <main className="profile-main py-4">
                 <div className="container">
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h2 className="section-title">View Profile</h2>
+                    <div className="d-flex justify-content-between align-items-end mb-4 animate-fade-in">
+                        <div>
+                            <h2 className="section-title mb-0">View Profile</h2>
+                            <p className="text-muted mb-0">Manage your personal information and preferences</p>
+                        </div>
                         <button
                             className="btn btn-primary edit-profile-btn d-flex align-items-center gap-2"
                             onClick={() => setIsEditModalOpen(true)}
                         >
-                            Edit Profile
+                            <Edit2 size={18} /> Edit Profile
                         </button>
                     </div>
 
-                    <div className="profile-card shadow-sm border-0 rounded-4 p-5 animate-fade-in">
-                        <div className="row align-items-center">
-                            {/* Left Side: Avatar & Basic Info */}
-                            <div className="col-md-5 text-center border-end-md">
-                                <div className="avatar-placeholder mb-3">
-                                    <User size={80} color="white" />
+                    <div className="profile-card horizontal-layout shadow-sm animate-fade-in mb-5">
+                        <div className="row g-0 align-items-center">
+                            {/* Left Side: Avatar & Name */}
+                            <div className="col-md-5 text-center py-5 border-end-light">
+                                <div className="avatar-placeholder large-avatar mb-3">
+                                    <User size={80} color="#878d9fff" strokeWidth={1.5} />
                                 </div>
-                                <h3 className="user-name mb-1">{userData.fullName}</h3>
+                                <h2 className="profile-user-name">{userData.fullName}</h2>
                             </div>
 
                             {/* Right Side: Detailed Details */}
-                            <div className="col-md-7 ps-md-5">
-                                <div className="detail-item mb-4">
-                                    <label>Joined :</label>
-                                    <p>{userData.createdAt?.toDate ? userData.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}</p>
-                                    <hr />
-                                </div>
+                            <div className="col-md-7 p-4 p-md-5">
+                                <div className="image-style-details">
+                                    <div className="img-detail-item">
+                                        <label>Joined :</label>
+                                        <p>{userData.createdAt?.toDate
+                                            ? userData.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                                            : 'January 2026'}</p>
+                                        <hr />
+                                    </div>
 
-                                <div className="detail-item mb-4">
-                                    <label>Department</label>
-                                    <p>{userData.department || 'Not specified'}</p>
-                                    <hr />
-                                </div>
+                                    <div className="img-detail-item">
+                                        <label>Department</label>
+                                        <p>{userData.department || 'Computer Engineering'}</p>
+                                        <hr />
+                                    </div>
 
-                                <div className="detail-item mb-4">
-                                    <label>Enrollment No:</label>
-                                    <p>{userData.enrollmentNo || 'Not specified'}</p>
-                                    <hr />
-                                </div>
+                                    <div className="img-detail-item">
+                                        <label>Enrollment No:</label>
+                                        <p>{userData.enrollmentNo || '240549333'}</p>
+                                        <hr />
+                                    </div>
 
-                                <div className="detail-item mb-0">
-                                    <label>Contact Information</label>
-                                    <p>Email: {userData.email}</p>
-                                    <hr />
+                                    <div className="img-detail-item">
+                                        <label>Contact Information</label>
+                                        <p>Email: {userData.email || 'abc@gmai.com'}</p>
+                                        <hr />
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        <div className="card-footer-line"></div>
                     </div>
                 </div>
             </main>
@@ -134,48 +144,51 @@ const Profile = () => {
             {/* Edit Profile Modal */}
             {isEditModalOpen && (
                 <div className="modal-overlay">
-                    <div className="edit-modal-content">
-                        <div className="modal-header d-flex justify-content-between align-items-center border-bottom pb-3">
-                            <h5 className="mb-0">Edit Profile</h5>
+                    <div className="edit-modal-content animate-fade-in">
+                        <div className="modal-header d-flex justify-content-between align-items-center">
+                            <h5 className="modal-title mb-0">Edit Your Profile</h5>
                             <button className="btn-close-custom" onClick={() => setIsEditModalOpen(false)}>
-                                <X size={20} />
+                                <X size={24} />
                             </button>
                         </div>
                         <form onSubmit={handleUpdateProfile} className="p-4">
-                            <div className="mb-3">
-                                <label className="form-label fw-bold small text-secondary">Full Name</label>
+                            <div className="mb-4">
+                                <label className="form-label fw-bold small text-secondary">FULL NAME</label>
                                 <input
                                     type="text"
                                     className="form-control"
                                     value={editData.fullName}
                                     onChange={(e) => setEditData({ ...editData, fullName: e.target.value })}
+                                    placeholder="Enter your full name"
                                     required
                                 />
                             </div>
-                            <div className="mb-3">
-                                <label className="form-label fw-bold small text-secondary">Department</label>
+                            <div className="mb-4">
+                                <label className="form-label fw-bold small text-secondary">DEPARTMENT</label>
                                 <select
                                     className="form-select"
                                     value={editData.department || ''}
                                     onChange={(e) => setEditData({ ...editData, department: e.target.value })}
                                 >
-                                    <option value="">Select department</option>
+                                    <option value="">Select your department</option>
                                     <option value="Computer Engineering">Computer Engineering</option>
                                     <option value="Mechanical Engineering">Mechanical Engineering</option>
                                     <option value="Electrical and Electronic Engineering">Electrical and Electronic Engineering</option>
+                                    <option value="Information Technology">Information Technology</option>
                                 </select>
                             </div>
                             <div className="mb-4">
-                                <label className="form-label fw-bold small text-secondary">Enrollment No</label>
+                                <label className="form-label fw-bold small text-secondary">ENROLLMENT NUMBER</label>
                                 <input
                                     type="text"
                                     className="form-control"
                                     value={editData.enrollmentNo || ''}
                                     onChange={(e) => setEditData({ ...editData, enrollmentNo: e.target.value })}
+                                    placeholder="Enter your enrollment number"
                                 />
                             </div>
-                            <button type="submit" className="btn btn-primary w-100 py-2 fw-bold">
-                                Save Changes
+                            <button type="submit" className="btn btn-primary w-100 save-btn py-3 mt-2">
+                                Update Profile Details
                             </button>
                         </form>
                     </div>
