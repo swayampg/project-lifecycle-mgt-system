@@ -3,8 +3,8 @@ import { Plus } from 'lucide-react';
 import './CreateProject.css';
 import Header from './Header';
 import BottomNav from './BottomNav';
-import { db, auth } from './firebaseConfig';
-import { collection, addDoc } from 'firebase/firestore';
+import { auth } from './firebaseConfig';
+import { createProjectWithTeam } from './services/db_services';
 import { useNavigate } from 'react-router-dom';
 
 const CreateProject = () => {
@@ -27,7 +27,7 @@ const CreateProject = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Basic date validation
@@ -36,44 +36,20 @@ const CreateProject = () => {
       return;
     }
 
-    console.log('Project Data to be passed to DB:', formData);
+    const user = auth.currentUser;
+    if (!user) {
+      alert("You must be logged in to create a project.");
+      return;
+    }
 
-    const saveProject = async () => {
-      try {
-        const proj_id = Date.now().toString();
-        await addDoc(collection(db, "projects"), {
-          proj_id: proj_id,
-          Name: formData.projectTitle,
-          projectLeader: formData.projectLeader,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          description: formData.description,
-          category: formData.category,
-          department: formData.department,
-          createdAt: new Date()
-        });
-
-        // 2. Add creator to ProjectMember collection
-        const user = auth.currentUser;
-        if (user) {
-          const project_member_id = `pm_${Date.now()}`;
-          await addDoc(collection(db, "ProjectMember"), {
-            project_member_id: project_member_id,
-            role: "Project Leader",
-            user_id: user.uid,
-            project_id: proj_id
-          });
-        }
-
-        alert('Project created successfully!');
-        navigate('/Home');
-      } catch (error) {
-        console.error("Error adding document: ", error);
-        alert('Error creating project. Please try again.');
-      }
-    };
-
-    saveProject();
+    try {
+      await createProjectWithTeam(formData, user.uid);
+      alert('Project created successfully!');
+      navigate('/Home');
+    } catch (error) {
+      console.error("Error creating project: ", error);
+      alert('Error creating project. Please try again.');
+    }
   };
 
   return (
