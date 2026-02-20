@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import './CreateProject.css';
 import Header from './Header';
 import BottomNav from './BottomNav';
-import { db } from './firebaseConfig';
+import { db, auth } from './firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 
@@ -52,6 +52,19 @@ const CreateProject = () => {
           department: formData.department,
           createdAt: new Date()
         });
+
+        // 2. Add creator to ProjectMember collection
+        const user = auth.currentUser;
+        if (user) {
+          const project_member_id = `pm_${Date.now()}`;
+          await addDoc(collection(db, "ProjectMember"), {
+            project_member_id: project_member_id,
+            role: "Project Leader",
+            user_id: user.uid,
+            project_id: proj_id
+          });
+        }
+
         alert('Project created successfully!');
         navigate('/Home');
       } catch (error) {
@@ -180,15 +193,9 @@ const CreateProject = () => {
                     <button type="button" className="icon-add"><Plus size={16} /></button>
                   </div>
                   <div className="team-list">
-                    {[1, 2, 3, 4].map((member) => (
-                      <div key={member} className="member-item">
-                        <img src="https://via.placeholder.com/40" alt="member" />
-                        <div>
-                          <div className="m-name">Swayam</div>
-                          <div className="m-role">Member</div>
-                        </div>
-                      </div>
-                    ))}
+                    <div className="text-muted small p-3 text-center">
+                      No members added yet.
+                    </div>
                   </div>
                 </div>
               </div>
