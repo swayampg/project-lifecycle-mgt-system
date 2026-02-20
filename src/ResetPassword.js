@@ -1,66 +1,66 @@
 import React, { useState } from 'react';
+import { auth } from './firebaseConfig';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
 const ResetPassword = () => {
-    const navigate = useNavigate();
-    const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-    const handleSendOTP = (e) => {
-        e.preventDefault();
-        // Implementation for sending OTP would go here
-        alert(`OTP sent to ${email}`);
-    };
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert("A password reset link has been sent to your email!");
+      navigate('/'); // Go back to login after sending
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="auth-container">
-            {/* Blue circles from your image */}
-            <div className="shape-left"></div>
-            <div className="shape-right"></div>
+  return (
+    <div className="auth-container">
+      <div className="login-card text-center">
+        <h1 className="welcome-text" style={{ color: '#1a4d8c', marginBottom: '30px' }}>Reset Password</h1>
+        
+        <form onSubmit={handleReset}>
+          <div className="mb-4 text-start">
+            <label className="fw-bold small text-secondary">Email Address</label>
+            <input 
+              type="email" 
+              className="form-control bg-light border-0" 
+              placeholder="Enter your email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+            />
+          </div>
 
-            <div className="login-card">
-                <h2 className="welcome-text" style={{ fontSize: '2rem', marginBottom: '2rem' }}>Reset password</h2>
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="btn w-100 fw-bold text-white mb-4" 
+            style={{ backgroundColor: '#1a4d8c', padding: '12px' }}
+          >
+            {loading ? "Sending..." : "Send Reset Link"}
+          </button>
 
-                <form onSubmit={handleSendOTP}>
-                    <div className="mb-4 text-start">
-                        <label className="fw-bold small text-secondary mb-2" style={{ fontSize: '0.85rem' }}>Email Address</label>
-                        <input
-                            type="email"
-                            className="form-control bg-light border-0 py-3"
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        className="btn w-100 fw-bold text-white py-3 mt-2"
-                        style={{ backgroundColor: '#1a4d8c', borderRadius: '8px' }}
-                    >
-                        Send OTP
-                    </button>
-
-                    <div className="text-center mt-4">
-                        <button
-                            type="button"
-                            className="btn btn-link p-0 text-muted text-decoration-none small"
-                            onClick={() => navigate('/')}
-                        >
-                            Back to Login
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            {/* Branding Logo at bottom left */}
-            <div className="brand-footer">
-                <div className="logo-placeholder">LOGO</div>
-                <p className="brand-name">Project Lifecycle<br />Management System</p>
-            </div>
-        </div>
-    );
+          <button 
+            type="button" 
+            className="btn btn-link w-100 text-muted text-decoration-none" 
+            onClick={() => navigate('/')}
+          >
+            Back to Login
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 export default ResetPassword;
