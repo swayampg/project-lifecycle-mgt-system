@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, X, Search, Trash2 } from 'lucide-react';
 import './CreateProject.css';
 import Header from './Header';
 import BottomNav from './BottomNav';
-import { auth } from './firebaseConfig';
-import { createProjectWithTeam } from './services/db_services';
+import { auth, db } from './firebaseConfig';
+import { createProjectWithTeam, findUserByEmail, sendInvitation } from './services/db_services';
 import { useNavigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const CreateProject = () => {
   const navigate = useNavigate();
@@ -19,6 +21,41 @@ const CreateProject = () => {
     department: '',
   });
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [invitationData, setInvitationData] = useState({ email: '', role: 'Member' });
+  const [invitedMembers, setInvitedMembers] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // 1. Auto-add creator on mount
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setInvitedMembers([{
+              uid: user.uid,
+              fullName: userData.fullName || "You",
+              email: user.email,
+              role: 'Leader',
+              isCreator: true
+            }]);
+            // Auto-fill project leader name
+            setFormData(prev => ({ ...prev, projectLeader: userData.fullName || "" }));
+          }
+        } catch (error) {
+          console.error("Error fetching creator data:", error);
+        }
+      } else {
+        navigate('/Login');
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -27,10 +64,59 @@ const CreateProject = () => {
     }));
   };
 
+  const handleAddMember = async () => {
+    if (!invitationData.email) return;
+
+    // Validation: Only one Leader and one Mentor
+    if (invitationData.role === 'Leader' || invitationData.role === 'Mentor') {
+      const alreadyExists = invitedMembers.some(m => m.role === invitationData.role);
+      if (alreadyExists) {
+        alert(`A project can only have one ${invitationData.role}.`);
+        return;
+      }
+    }
+
+    setIsSearching(true);
+    try {
+      const user = await findUserByEmail(invitationData.email);
+      if (user) {
+        if (invitedMembers.some(m => m.uid === user.uid)) {
+          alert("User is already in the team list.");
+          return;
+        }
+
+        setInvitedMembers([...invitedMembers, { ...user, role: invitationData.role }]);
+        setInvitationData({ email: '', role: 'Member' });
+        setIsModalOpen(false);
+      } else {
+        alert("No user found with this email. Only registered users can be invited.");
+      }
+    } catch (error) {
+      console.error("Error searching user:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const removeMember = (uid) => {
+    setInvitedMembers(invitedMembers.filter(m => m.uid !== uid));
+  };
+
+  const updateMemberRole = (uid, newRole) => {
+    // Validation: Only one Leader and one Mentor
+    if (newRole === 'Leader' || newRole === 'Mentor') {
+      const alreadyExists = invitedMembers.some(m => m.role === newRole && m.uid !== uid);
+      if (alreadyExists) {
+        alert(`A project can only have one ${newRole}.`);
+        return;
+      }
+    }
+    setInvitedMembers(invitedMembers.map(m => m.uid === uid ? { ...m, role: newRole } : m));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Basic date validation
     if (new Date(formData.endDate) < new Date(formData.startDate)) {
       alert('End date cannot be before start date');
       return;
@@ -43,8 +129,20 @@ const CreateProject = () => {
     }
 
     try {
-      await createProjectWithTeam(formData, user.uid);
-      alert('Project created successfully!');
+      // Find the creator's role from the list
+      const creator = invitedMembers.find(m => m.isCreator);
+      const creatorRole = creator ? creator.role : "Leader";
+
+      // 1. Create project (returns proj_id)
+      const proj_id = await createProjectWithTeam(formData, user.uid, creatorRole);
+
+      // 2. Send invitations for all members (EXCEPT the creator who is already in projectTeam)
+      const otherMembers = invitedMembers.filter(m => !m.isCreator);
+      for (const member of otherMembers) {
+        await sendInvitation({ proj_id, Name: formData.projectTitle, projectLeader: formData.projectLeader }, member, member.role);
+      }
+
+      alert('Project created and invitations sent!');
       navigate('/Home');
     } catch (error) {
       console.error("Error creating project: ", error);
@@ -74,7 +172,7 @@ const CreateProject = () => {
                 />
               </div>
               <div className="field col">
-                <label>Project Leader<span className="required-star">*</span></label>
+                <label>Project Leader Name<span className="required-star">*</span></label>
                 <input
                   type="text"
                   name="projectLeader"
@@ -161,17 +259,56 @@ const CreateProject = () => {
                 <button type="submit" className="btn-create">Create Project</button>
               </div>
 
-              {/* Team panel is visually floated on the right */}
+              {/* Team panel */}
               <div className="col-right col-md-4">
                 <div className="team-card">
                   <div className="team-header">
                     <span>Team Members</span>
-                    <button type="button" className="icon-add"><Plus size={16} /></button>
+                    <button
+                      type="button"
+                      className="icon-add"
+                      onClick={() => setIsModalOpen(true)}
+                    >
+                      <Plus size={16} />
+                    </button>
                   </div>
                   <div className="team-list">
-                    <div className="text-muted small p-3 text-center">
-                      No members added yet.
-                    </div>
+                    {invitedMembers.length > 0 ? (
+                      invitedMembers.map((m) => (
+                        <div key={m.uid} className="member-item p-2 border-bottom d-flex flex-column gap-1">
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className="small fw-bold text-truncate" style={{ maxWidth: '120px' }} title={m.fullName}>
+                              {m.fullName} {m.isCreator && "(You)"}
+                            </span>
+                            <div className="d-flex gap-2">
+                              <select
+                                className="form-select form-select-sm border-0 bg-transparent p-0 text-muted"
+                                style={{ fontSize: '0.75rem', width: 'auto' }}
+                                value={m.role}
+                                onChange={(e) => updateMemberRole(m.uid, e.target.value)}
+                              >
+                                <option value="Member">Member</option>
+                                <option value="Leader">Leader</option>
+                                <option value="Mentor">Mentor</option>
+                              </select>
+                              {!m.isCreator && (
+                                <button
+                                  type="button"
+                                  className="btn-delete-member border-0 bg-transparent p-0 text-danger"
+                                  onClick={() => removeMember(m.uid)}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-muted small p-3 text-center">
+                        Loading your profile...
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -179,6 +316,55 @@ const CreateProject = () => {
           </form>
         </div>
       </main>
+
+      {/* Add Member Modal */}
+      {isModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content-custom">
+            <div className="modal-header-custom d-flex justify-content-between border-bottom pb-3">
+              <h5 className="m-0">Add Member</h5>
+              <button className="btn-close-custom bg-transparent border-0" onClick={() => setIsModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body-custom py-4">
+              <div className="mb-3">
+                <label className="form-label">Search Email</label>
+                <div className="input-group">
+                  <span className="input-group-text"><Search size={14} /></span>
+                  <input
+                    type="email"
+                    className="form-control"
+                    placeholder="Enter email address"
+                    value={invitationData.email}
+                    onChange={(e) => setInvitationData({ ...invitationData, email: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="form-label">Assign Role</label>
+                <select
+                  className="form-select"
+                  value={invitationData.role}
+                  onChange={(e) => setInvitationData({ ...invitationData, role: e.target.value })}
+                >
+                  <option value="Member">Member</option>
+                  <option value="Leader">Leader</option>
+                  <option value="Mentor">Mentor</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary w-100 py-2"
+                onClick={handleAddMember}
+                disabled={isSearching}
+              >
+                {isSearching ? "Searching..." : "Done"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>
