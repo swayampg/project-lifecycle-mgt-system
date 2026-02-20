@@ -6,6 +6,7 @@ import ResetPassword from './ResetPassword'; // 🔹 Import Reset Password page
 import Home from './Home';
 import CreateProject from './CreateProject';
 import ProjectBoard from './ProjectBoard';
+import Profile from './Profile';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -27,6 +28,8 @@ function App() {
         <Route path="/CreateProject" element={<CreateProject />} />
 
         <Route path="/project-board" element={<ProjectBoard />} />
+
+        <Route path="/profile" element={<Profile />} />
 
 
 
