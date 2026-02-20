@@ -1,19 +1,30 @@
 /* Dashboard Container */
 .dashboard-container {
     background-color: #f4f7fe;
-    /* Light grey/blue background like the image */
+    /* Light grey/blue background */
     min-height: 100vh;
     padding-bottom: 100px;
     /* Space for the floating bottom menu */
 }
 
-/* Header styles removed, now using Header.css */
+/* Invitations Section */
+.invitations-section {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 15px;
+    border: 1px dashed #cbd5e1;
+    margin-bottom: 2rem;
+}
 
-.profile-section img {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    border: 2px solid white;
+.invite-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #e2e8f0 !important;
+}
+
+.invite-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    border-color: #1a4d8c !important;
 }
 
 /* Stat Cards Section */
@@ -32,7 +43,7 @@
 .icon-box {
     width: 50px;
     height: 50px;
-    border-radius: 10px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -42,19 +53,15 @@
 /* Main Content Area */
 .project-area {
     background: white;
+    padding: 25px;
     border-radius: 20px;
-    min-height: 400px;
-    border: 1px solid #e0e0e0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #888;
+    min-height: 300px;
+    border: 1px solid #e2e8f0;
 }
 
 .project-item-card {
     transition: all 0.2s ease-in-out;
-    border: 1px solid #eee !important;
+    border: 1px solid #e2e8f0 !important;
 }
 
 .project-item-card:hover {
@@ -66,6 +73,7 @@
 .project-name {
     font-size: 1.1rem;
     font-weight: 700;
+    color: #1a4d8c;
 }
 
 .cursor-pointer {

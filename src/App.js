@@ -6,7 +6,16 @@ import ResetPassword from './ResetPassword'; // 🔹 Import Reset Password page
 import Home from './Home';
 import CreateProject from './CreateProject';
 import ProjectBoard from './ProjectBoard';
+<<<<<<< HEAD
 import Progress from './Progress';
+=======
+import Profile from './Profile';
+import Mytask from './Mytask';
+import ProfileOverview from './ProfileOverview';
+import Notifications from './Notifications';
+
+
+>>>>>>> 1a9331fa6ba3ff1278b8847afd260f745f3a8a94
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -31,6 +40,14 @@ function App() {
 
         <Route path="/Progress" element={<Progress />} />
 
+
+        <Route path="/profile" element={<Profile />} />
+
+
+        <Route path="/Mytask" element={<Mytask />} />
+
+        <Route path="/profile-overview" element={<ProfileOverview />} />
+        <Route path="/Notifications" element={<Notifications />} />
 
 
         {/* Placeholder for your Dashboard. 

@@ -1,0 +1,47 @@
+/* 🔹 FILE: src/pages/Notifications.css */
+
+/* Main wrapper for the notification content */
+.notification-wrapper {
+    border-radius: 15px;
+    min-height: 60vh;
+}
+
+/* Container for the ALL/UNREAD buttons */
+.filter-toggle-group {
+    background: #f0f2f5;
+    padding: 4px;
+    border-radius: 10px;
+    display: flex;
+    gap: 4px;
+}
+
+/* Individual toggle button styling */
+.filter-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 20px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #555;
+    transition: 0.3s;
+    border-radius: 8px;
+}
+
+/* Active state for toggle buttons (Blue background) */
+.filter-btn.active {
+    background: #1a4a8a; /* Dark blue color from your image */
+    color: white;
+}
+
+/* Styling for each row */
+.notification-item {
+    transition: background 0.2s;
+}
+
+.notification-item:hover {
+    background-color: #f9f9f9;
+}
+
+.notification-item:last-child {
+    border-bottom: none !important;
+}
