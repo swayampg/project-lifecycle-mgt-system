@@ -29,6 +29,11 @@ const ProjectBoard = () => {
     // Form state for adding task
     const [newTaskName, setNewTaskName] = useState('');
     const [newTaskDescription, setNewTaskDescription] = useState('');
+    const [newAssignBy, setNewAssignBy] = useState('');
+    const [newAssignTo, setNewAssignTo] = useState('');
+    const [newDeadline, setNewDeadline] = useState('');
+    const [newStatus, setNewStatus] = useState('');
+    const [newPriority, setNewPriority] = useState('');
 
     // --- PHASE ACTIONS ---
 
@@ -53,6 +58,11 @@ const ProjectBoard = () => {
         setCurrentPhaseId(phaseId);
         setNewTaskName('');
         setNewTaskDescription('');
+        setNewAssignBy('');
+        setNewAssignTo('');
+        setNewDeadline('');
+        setNewStatus('');
+        setNewPriority('');
         setIsAddTaskModalOpen(true);
     };
 
@@ -64,6 +74,11 @@ const ProjectBoard = () => {
             id: `t-${Date.now()}`,
             name: newTaskName,
             description: newTaskDescription,
+            assignBy: newAssignBy,
+            assignTo: newAssignTo,
+            deadline: newDeadline,
+            status: newStatus,
+            priority: newPriority,
             completed: false
         };
 
@@ -152,55 +167,108 @@ const ProjectBoard = () => {
             {/* Add Task Modal */}
             {isAddTaskModalOpen && (
                 <div className="modal-overlay">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h5>Add New Task</h5>
-                            <X
-                                size={20}
-                                className="cursor-pointer"
-                                onClick={() => setIsAddTaskModalOpen(false)}
-                            />
+                    <div className="add-task-modal-content">
+                        <div className="add-task-modal-header">
+                            <span>Sample task</span>
                         </div>
-                        <form onSubmit={handleAddTask}>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label>Task Name</label>
-                                    <input
-                                        type="text"
-                                        value={newTaskName}
-                                        onChange={(e) => setNewTaskName(e.target.value)}
-                                        placeholder="Enter task name"
-                                        required
-                                        autoFocus
-                                    />
+                        <form onSubmit={handleAddTask} className="add-task-form">
+                            <div className="add-task-modal-body">
+                                <div className="form-left-column">
+                                    <div className="form-field">
+                                        <label>Title</label>
+                                        <input
+                                            type="text"
+                                            value={newTaskName}
+                                            onChange={(e) => setNewTaskName(e.target.value)}
+                                            required
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="form-field">
+                                        <label>Description</label>
+                                        <textarea
+                                            value={newTaskDescription}
+                                            onChange={(e) => setNewTaskDescription(e.target.value)}
+                                            rows="6"
+                                        ></textarea>
+                                    </div>
                                 </div>
-                                <div className="form-group">
-                                    <label>Description</label>
-                                    <textarea
-                                        value={newTaskDescription}
-                                        onChange={(e) => setNewTaskDescription(e.target.value)}
-                                        placeholder="Enter task description"
-                                        rows="3"
-                                    ></textarea>
+
+                                <div className="form-right-column">
+                                    <div className="form-row">
+                                        <div className="form-field">
+                                            <label>Assign by</label>
+                                            <input
+                                                type="text"
+                                                value={newAssignBy}
+                                                onChange={(e) => setNewAssignBy(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Assign to</label>
+                                            <select
+                                                value={newAssignTo}
+                                                onChange={(e) => setNewAssignTo(e.target.value)}
+                                            >
+                                                <option value=""></option>
+                                                <option value="User 1">User 1</option>
+                                                <option value="User 2">User 2</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="form-row">
+                                        <div className="form-field">
+                                            <label>Deadline</label>
+                                            <div className="date-input-wrapper">
+                                                <input
+                                                    type="date"
+                                                    value={newDeadline}
+                                                    onChange={(e) => setNewDeadline(e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Status</label>
+                                            <select
+                                                value={newStatus}
+                                                onChange={(e) => setNewStatus(e.target.value)}
+                                            >
+                                                <option value=""></option>
+                                                <option value="To Do">To Do</option>
+                                                <option value="In Progress">In Progress</option>
+                                                <option value="Done">Done</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="form-field priority-field">
+                                        <label>Priority</label>
+                                        <select
+                                            value={newPriority}
+                                            onChange={(e) => setNewPriority(e.target.value)}
+                                        >
+                                            <option value=""></option>
+                                            <option value="Low">Low</option>
+                                            <option value="Medium">Medium</option>
+                                            <option value="High">High</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="modal-footer">
-                                <button
-                                    type="button"
-                                    className="btn btn-light btn-sm"
-                                    onClick={() => setIsAddTaskModalOpen(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="btn btn-primary btn-sm"
-                                    style={{ backgroundColor: '#1a4d8c' }}
-                                >
-                                    Add Task
+                            <div className="add-task-modal-footer">
+                                <button type="submit" className="create-task-btn">
+                                    Create task
                                 </button>
                             </div>
                         </form>
+                        {/* Close button - though not in the image, usually needed. I'll add a small 'X' or click outside */}
+                        <div
+                            className="modal-close-icon"
+                            onClick={() => setIsAddTaskModalOpen(false)}
+                        >
+                            <X size={20} />
+                        </div>
                     </div>
                 </div>
             )}
