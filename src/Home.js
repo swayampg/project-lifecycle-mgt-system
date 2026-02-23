@@ -152,21 +152,27 @@ const Home = () => {
                     ) : projects.length > 0 ? (
                         <div className="row g-4">
                             {projects.map((project) => (
-                                <div key={project.id} className="col-md-6 col-lg-4">
+                                <div key={project.id} className="col-12">
                                     <div
-                                        className="project-item-card p-3 shadow-sm border rounded-3 bg-white cursor-pointer"
+                                        className="project-item-card p-3 shadow-sm border rounded-3 bg-white cursor-pointer d-flex justify-content-between align-items-center"
                                         onClick={() => navigate('/ProjectBoard')}
                                     >
-                                        <div className="d-flex justify-content-between align-items-start mb-2">
+                                        <div className="project-info-left" style={{ flex: '1' }}>
                                             <h6 className="project-name mb-0 text-primary">{project.Name}</h6>
                                             <span className="badge bg-light text-dark small">{project.category}</span>
                                         </div>
-                                        <div className="text-muted small mb-2">
-                                            <strong>Leader:</strong> {project.projectLeader}
+
+                                        <div className="project-info-middle text-center" style={{ flex: '1' }}>
+                                            <div className="text-muted small">
+                                                <strong>Leader:</strong> {project.projectLeader}
+                                            </div>
                                         </div>
-                                        <div className="d-flex justify-content-between small text-muted">
-                                            <span><strong>Start:</strong> {project.startDate}</span>
-                                            <span><strong>End:</strong> {project.endDate}</span>
+
+                                        <div className="project-info-right text-end" style={{ flex: '1' }}>
+                                            <div className="d-flex flex-column small text-muted">
+                                                <span><strong>Start:</strong> {project.startDate}</span>
+                                                <span><strong>End:</strong> {project.endDate}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

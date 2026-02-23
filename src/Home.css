@@ -60,20 +60,28 @@
 }
 
 .project-item-card {
-    transition: all 0.2s ease-in-out;
+    transition: none !important;
     border: 1px solid #e2e8f0 !important;
+    margin-bottom: 0.5rem;
 }
 
 .project-item-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
-    border-color: #1a4d8c !important;
+    transform: none !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+    border-color: #e2e8f0 !important;
 }
 
 .project-name {
     font-size: 1.1rem;
     font-weight: 700;
     color: #1a4d8c;
+    margin-bottom: 2px;
+}
+
+.project-info-left,
+.project-info-middle,
+.project-info-right {
+    padding: 0 10px;
 }
 
 .cursor-pointer {
