@@ -1,39 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import './ProjectBoard.css';
-import { Plus, Minus, X, Edit2, Check } from 'lucide-react';
+import { Plus, Minus, X, Edit2, Check, Layout } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { auth, db } from './firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
+import {
+    getProjectPhases,
+    addProjectPhase,
+    updateProjectPhase,
+    deleteProjectPhase,
+    getProjectById,
+    getProjectTeamMembers,
+    addProjectTask,
+    getTasksByPhase,
+    updateProjectTask,
+    deleteProjectTask
+} from './services/db_services';
 import BottomNav from './BottomNav';
 import Header from './Header';
 
 const ProjectBoard = () => {
-    // 1. STATE FOR PHASES AND TASKS
-    const [phases, setPhases] = useState(() => {
-        const saved = localStorage.getItem('projectPhases');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-            } catch (e) {
-                console.error("Error parsing saved phases:", e);
-            }
-        }
-        return [
-            { id: 1, title: 'Requirement Analysis', tasks: [] },
-            { id: 2, title: 'Design', tasks: [] },
-            { id: 3, title: 'Implementation', tasks: [] },
-            { id: 4, title: 'Testing', tasks: [] },
-            { id: 5, title: 'Completions', tasks: [] }
-        ];
-    });
-
-    useEffect(() => {
-        localStorage.setItem('projectPhases', JSON.stringify(phases));
-    }, [phases]);
-
-    const calculateProgress = (tasks) => {
-        if (!tasks || tasks.length === 0) return 0;
-        const completedCount = tasks.filter(t => t.completed).length;
-        return Math.round((completedCount / tasks.length) * 100);
-    };
+    const projectId = localStorage.getItem('selectedProjectId');
+    const [project, setProject] = useState(null);
+    const [teamMembers, setTeamMembers] = useState([]);
+    const [phases, setPhases] = useState([]);
+    const [loading, setLoading] = useState(!!projectId);
+    const [currentUserName, setCurrentUserName] = useState('');
+    const [userRole, setUserRole] = useState(null);
 
     // 2. STATE FOR MODALS AND EDITING
     const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
@@ -55,20 +48,97 @@ const ProjectBoard = () => {
     const [newPriority, setNewPriority] = useState('');
     const [newMedia, setNewMedia] = useState({ photos: [], videos: [] });
 
-    // --- PHASE ACTIONS ---
+    useEffect(() => {
+        if (projectId) {
+            fetchProjectTeamAndPhases(projectId);
+        } else {
+            setLoading(false);
+        }
+    }, [projectId]);
 
-    const handleAddPhase = () => {
-        const newPhase = {
-            id: Date.now(),
-            title: 'New Phase',
-            tasks: []
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const user = auth.currentUser;
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    setCurrentUserName(userDoc.data().fullName);
+                }
+            }
         };
-        setPhases(prev => [...prev, newPhase]);
+        fetchUserData();
+    }, []);
+
+    const fetchProjectTeamAndPhases = async (id) => {
+        setLoading(true);
+        try {
+            const [projData, phaseData, teamData] = await Promise.all([
+                getProjectById(id),
+                getProjectPhases(id),
+                getProjectTeamMembers(id)
+            ]);
+
+            if (projData) setProject(projData);
+            if (teamData) {
+                setTeamMembers(teamData);
+                // Find current user's role
+                const user = auth.currentUser;
+                const myMember = teamData.find(m => m.uid === user?.uid);
+                if (myMember) setUserRole(myMember.role);
+            }
+
+            // Fetch tasks for each phase
+            const phasesWithTasks = await Promise.all(phaseData.map(async (p) => {
+                const tasks = await getTasksByPhase(p.id);
+                return {
+                    id: p.id,
+                    title: p.phaseName,
+                    tasks: tasks || []
+                };
+            }));
+
+            setPhases(phasesWithTasks);
+        } catch (error) {
+            console.error("Error fetching project data:", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleRemovePhase = (phaseId) => {
+    const calculateProgress = (tasks) => {
+        if (!tasks || tasks.length === 0) return 0;
+        const completedCount = tasks.filter(t => t.completed).length;
+        return Math.round((completedCount / tasks.length) * 100);
+    };
+
+    // --- HELPERS ---
+    const isLeader = userRole === 'Leader' || userRole === 'Project Leader';
+
+    // --- PHASE ACTIONS ---
+
+    const handleAddPhase = async () => {
+        try {
+            const newPhase = await addProjectPhase(projectId, 'New Phase', project?.Name || "");
+            setPhases(prev => [...prev, {
+                id: newPhase.id,
+                title: newPhase.phaseName,
+                tasks: []
+            }]);
+        } catch (error) {
+            console.error("Error adding phase:", error);
+            alert("Failed to add phase. Please try again.");
+        }
+    };
+
+    const handleRemovePhase = async (phaseId) => {
         if (window.confirm("Are you sure you want to remove this phase?")) {
-            setPhases(prev => prev.filter(p => p.id !== phaseId));
+            try {
+                await deleteProjectPhase(phaseId);
+                setPhases(prev => prev.filter(p => p.id !== phaseId));
+            } catch (error) {
+                console.error("Error removing phase:", error);
+                alert("Failed to remove phase.");
+            }
         }
     };
 
@@ -77,10 +147,16 @@ const ProjectBoard = () => {
         setEditPhaseTitle(currentTitle);
     };
 
-    const saveRename = (phaseId) => {
+    const saveRename = async (phaseId) => {
         if (!editPhaseTitle.trim()) return;
-        setPhases(prev => prev.map(p => p.id === phaseId ? { ...p, title: editPhaseTitle } : p));
-        setEditingPhaseId(null);
+        try {
+            await updateProjectPhase(phaseId, { phaseName: editPhaseTitle });
+            setPhases(prev => prev.map(p => p.id === phaseId ? { ...p, title: editPhaseTitle } : p));
+            setEditingPhaseId(null);
+        } catch (error) {
+            console.error("Error renaming phase:", error);
+            alert("Failed to rename phase.");
+        }
     };
 
     const cancelEditing = () => {
@@ -89,16 +165,8 @@ const ProjectBoard = () => {
     };
 
     const handleResetBoard = () => {
-        if (window.confirm("Are you sure you want to reset the board to default phases? All current tasks will be lost.")) {
-            const defaults = [
-                { id: 1, title: 'Requirement Analysis', tasks: [] },
-                { id: 2, title: 'Design', tasks: [] },
-                { id: 3, title: 'Implementation', tasks: [] },
-                { id: 4, title: 'Testing', tasks: [] },
-                { id: 5, title: 'Completions', tasks: [] }
-            ];
-            setPhases(defaults);
-            localStorage.setItem('projectPhases', JSON.stringify(defaults));
+        if (window.confirm("Are you sure you want to reset the board? This will clear all phases.")) {
+            setPhases([]);
         }
     };
 
@@ -108,11 +176,11 @@ const ProjectBoard = () => {
         setCurrentPhaseId(phaseId);
         setNewTaskName('');
         setNewTaskDescription('');
-        setNewAssignBy('');
+        setNewAssignBy(currentUserName); // Auto-set
         setNewAssignTo('');
         setNewDeadline('');
-        setNewStatus('');
-        setNewPriority('');
+        setNewStatus('In Progress');
+        setNewPriority('Medium');
         setNewMedia({ photos: [], videos: [] });
         setIsAddTaskModalOpen(true);
     };
@@ -138,12 +206,11 @@ const ProjectBoard = () => {
         }));
     };
 
-    const handleAddTask = (e) => {
+    const handleAddTask = async (e) => {
         e.preventDefault();
         if (!newTaskName.trim()) return;
 
-        const newTask = {
-            id: `t-${Date.now()}`,
+        const taskData = {
             name: newTaskName,
             description: newTaskDescription,
             assignBy: newAssignBy,
@@ -152,30 +219,48 @@ const ProjectBoard = () => {
             status: newStatus,
             priority: newPriority,
             media: newMedia,
+            phaseId: currentPhaseId,
             completed: false
         };
 
-        setPhases(prev => prev.map(p => {
-            if (p.id === currentPhaseId) {
-                return { ...p, tasks: [...p.tasks, newTask] };
-            }
-            return p;
-        }));
+        try {
+            const taskId = await addProjectTask(taskData);
+            const newTask = { id: taskId, ...taskData };
 
-        setIsAddTaskModalOpen(false);
+            setPhases(prev => prev.map(p => {
+                if (p.id === currentPhaseId) {
+                    return { ...p, tasks: [...p.tasks, newTask] };
+                }
+                return p;
+            }));
+
+            setIsAddTaskModalOpen(false);
+        } catch (error) {
+            console.error("Error adding task:", error);
+            alert("Failed to add task.");
+        }
     };
 
-    const toggleTaskCompletion = (e, phaseId, taskId) => {
-        e.stopPropagation(); // Prevent opening description popup
-        setPhases(prev => prev.map(p => {
-            if (p.id === phaseId) {
-                return {
-                    ...p,
-                    tasks: p.tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t)
-                };
-            }
-            return p;
-        }));
+    const toggleTaskCompletion = async (e, phaseId, taskId) => {
+        e.stopPropagation();
+        const currentPhase = phases.find(p => p.id === phaseId);
+        const task = currentPhase.tasks.find(t => t.id === taskId);
+        const newCompleted = !task.completed;
+
+        try {
+            await updateProjectTask(taskId, { completed: newCompleted });
+            setPhases(prev => prev.map(p => {
+                if (p.id === phaseId) {
+                    return {
+                        ...p,
+                        tasks: p.tasks.map(t => t.id === taskId ? { ...t, completed: newCompleted } : t)
+                    };
+                }
+                return p;
+            }));
+        } catch (error) {
+            console.error("Error toggling task completion:", error);
+        }
     };
 
     const viewTaskDetails = (task, phaseId) => {
@@ -192,42 +277,55 @@ const ProjectBoard = () => {
         setIsViewTaskModalOpen(true);
     };
 
-    const handleSaveTask = (e) => {
+    const handleSaveTask = async (e) => {
         e.preventDefault();
-        setPhases(prev => prev.map(p => {
-            if (p.id === currentPhaseId) {
-                return {
-                    ...p,
-                    tasks: p.tasks.map(t => t.id === currentTask.id ? {
-                        ...t,
-                        name: newTaskName,
-                        description: newTaskDescription,
-                        assignBy: newAssignBy,
-                        assignTo: newAssignTo,
-                        deadline: newDeadline,
-                        status: newStatus,
-                        priority: newPriority,
-                        media: newMedia
-                    } : t)
-                };
-            }
-            return p;
-        }));
-        setIsViewTaskModalOpen(false);
-    };
+        const updates = {
+            name: newTaskName,
+            description: newTaskDescription,
+            assignBy: newAssignBy,
+            assignTo: newAssignTo,
+            deadline: newDeadline,
+            status: newStatus,
+            priority: newPriority,
+            media: newMedia
+        };
 
-    const handleDeleteTask = () => {
-        if (window.confirm("Are you sure you want to delete this task?")) {
+        try {
+            await updateProjectTask(currentTask.id, updates);
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {
                     return {
                         ...p,
-                        tasks: p.tasks.filter(t => t.id !== currentTask.id)
+                        tasks: p.tasks.map(t => t.id === currentTask.id ? { ...t, ...updates } : t)
                     };
                 }
                 return p;
             }));
             setIsViewTaskModalOpen(false);
+        } catch (error) {
+            console.error("Error updating task:", error);
+            alert("Failed to update task.");
+        }
+    };
+
+    const handleDeleteTask = async () => {
+        if (window.confirm("Are you sure you want to delete this task?")) {
+            try {
+                await deleteProjectTask(currentTask.id);
+                setPhases(prev => prev.map(p => {
+                    if (p.id === currentPhaseId) {
+                        return {
+                            ...p,
+                            tasks: p.tasks.filter(t => t.id !== currentTask.id)
+                        };
+                    }
+                    return p;
+                }));
+                setIsViewTaskModalOpen(false);
+            } catch (error) {
+                console.error("Error deleting task:", error);
+                alert("Failed to delete task.");
+            }
         }
     };
 
@@ -235,84 +333,124 @@ const ProjectBoard = () => {
         <div className="project-board-container">
             <Header />
 
-            {/* --- BOARD AREA --- */}
-            <div className="board-wrapper shadow-sm">
-                <div className="board-columns">
-                    {phases.map((phase) => (
-                        <div key={phase.id} className="board-column">
-                            <div className="column-header">
-                                {editingPhaseId === phase.id ? (
-                                    <div className="edit-phase-input-group">
-                                        <input
-                                            type="text"
-                                            className="edit-phase-input"
-                                            value={editPhaseTitle}
-                                            onChange={(e) => setEditPhaseTitle(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') saveRename(phase.id);
-                                                if (e.key === 'Escape') cancelEditing();
-                                            }}
-                                            autoFocus
-                                        />
-                                        <Check
-                                            size={14}
-                                            className="cursor-pointer"
-                                            onClick={() => saveRename(phase.id)}
-                                        />
-                                    </div>
-                                ) : (
-                                    <>
-                                        <h6>{phase.title}</h6>
-                                        <div className="header-actions">
-                                            <Edit2
-                                                size={14}
-                                                className="cursor-pointer"
-                                                onClick={() => startEditing(phase.id, phase.title)}
-                                            />
-                                            <Minus
-                                                size={14}
-                                                className="cursor-pointer"
-                                                onClick={() => handleRemovePhase(phase.id)}
-                                            />
-                                        </div>
-                                    </>
-                                )}
+            {loading ? (
+                <div className="d-flex justify-content-center align-items-center" style={{ height: '70vh' }}>
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading phases...</span>
+                    </div>
+                </div>
+            ) : !projectId ? (
+                <div className="no-phases-container d-flex flex-column align-items-center justify-content-center" style={{ height: '70vh' }}>
+                    <Layout size={80} className="text-muted mb-4 opacity-25" />
+                    <h3 className="text-muted">No project selected</h3>
+                    <p className="text-muted">Select a project from the home page to view its board.</p>
+                </div>
+            ) : (
+                /* --- BOARD AREA --- */
+                <>
+                    <div className="board-header mb-4 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 className="m-0 text-primary">{project?.Name || "Project Board"}</h2>
+                            {project?.category && <span className="badge bg-light text-muted border">{project.category}</span>}
+                        </div>
+                    </div>
+
+                    <div className="board-wrapper shadow-sm">
+                        {phases.length === 0 ? (
+                            <div className="no-phases-inner d-flex flex-column align-items-center justify-content-center py-5">
+                                <h4 className="text-muted">No phases found</h4>
+                                <p className="text-muted">Start by adding your first project phase below.</p>
                             </div>
-                            <div className="column-body">
-                                <button
-                                    className="add-task-btn"
-                                    onClick={() => openAddTaskModal(phase.id)}
-                                >
-                                    <Plus size={14} /> Add task
-                                </button>
-                                {phase.tasks.map((task) => (
-                                    <div
-                                        key={task.id}
-                                        className={`task-item ${task.completed ? 'completed' : ''}`}
-                                        onClick={() => viewTaskDetails(task, phase.id)}
-                                    >
-                                        <span>{task.name}</span>
-                                        <div
-                                            className="status-circle"
-                                            onClick={(e) => toggleTaskCompletion(e, phase.id, task.id)}
-                                        ></div>
+                        ) : (
+                            <div className="board-columns">
+                                {phases.map((phase) => (
+                                    <div key={phase.id} className="board-column">
+                                        <div className="column-header">
+                                            {editingPhaseId === phase.id ? (
+                                                <div className="edit-phase-input-group">
+                                                    <input
+                                                        type="text"
+                                                        className="edit-phase-input"
+                                                        value={editPhaseTitle}
+                                                        onChange={(e) => setEditPhaseTitle(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') saveRename(phase.id);
+                                                            if (e.key === 'Escape') cancelEditing();
+                                                        }}
+                                                        autoFocus
+                                                    />
+                                                    <Check
+                                                        size={14}
+                                                        className="cursor-pointer"
+                                                        onClick={() => saveRename(phase.id)}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <h6>{phase.title}</h6>
+                                                    <div className="header-actions">
+                                                        {isLeader && (
+                                                            <>
+                                                                <Edit2
+                                                                    size={14}
+                                                                    className="cursor-pointer"
+                                                                    onClick={() => startEditing(phase.id, phase.title)}
+                                                                />
+                                                                <Minus
+                                                                    size={14}
+                                                                    className="cursor-pointer"
+                                                                    onClick={() => handleRemovePhase(phase.id)}
+                                                                />
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className="column-body">
+                                            {isLeader && (
+                                                <button
+                                                    className="add-task-btn"
+                                                    onClick={() => openAddTaskModal(phase.id)}
+                                                >
+                                                    <Plus size={14} /> Add task
+                                                </button>
+                                            )}
+                                            {phase.tasks.map((task) => (
+                                                <div
+                                                    key={task.id}
+                                                    className={`task-item ${task.completed ? 'completed' : ''}`}
+                                                    onClick={() => viewTaskDetails(task, phase.id)}
+                                                >
+                                                    <span>{task.name}</span>
+                                                    <div
+                                                        className="status-circle"
+                                                        onClick={(e) => toggleTaskCompletion(e, phase.id, task.id)}
+                                                    ></div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        )}
 
-                {/* Add Phase Button */}
-                <div className="add-phase-container">
-                    <button className="btn-reset-board me-3" onClick={handleResetBoard}>
-                        Reset Board
-                    </button>
-                    <button className="btn-add-phase" onClick={handleAddPhase}>
-                        Add Phase
-                    </button>
-                </div>
-            </div>
+                        {/* Add Phase Button (FAB) */}
+                        <div className="add-phase-container">
+                            {isLeader && (
+                                <>
+                                    <button className="btn-reset-board" onClick={handleResetBoard}>
+                                        Reset Board
+                                    </button>
+                                    <button className="btn-add-phase" onClick={handleAddPhase}>
+                                        <Plus size={18} /> Add Phase
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
 
             <BottomNav />
 
@@ -323,7 +461,7 @@ const ProjectBoard = () => {
                 <div className="modal-overlay">
                     <div className="add-task-modal-content">
                         <div className="add-task-modal-header">
-                            <span>Sample task</span>
+                            <span>Add new task</span>
                         </div>
                         <form onSubmit={handleAddTask} className="add-task-form">
                             <div className="add-task-modal-body">
@@ -355,7 +493,8 @@ const ProjectBoard = () => {
                                             <input
                                                 type="text"
                                                 value={newAssignBy}
-                                                onChange={(e) => setNewAssignBy(e.target.value)}
+                                                readOnly
+                                                className="bg-light"
                                             />
                                         </div>
                                         <div className="form-field">
@@ -363,10 +502,14 @@ const ProjectBoard = () => {
                                             <select
                                                 value={newAssignTo}
                                                 onChange={(e) => setNewAssignTo(e.target.value)}
+                                                required
                                             >
-                                                <option value=""></option>
-                                                <option value="User 1">User 1</option>
-                                                <option value="User 2">User 2</option>
+                                                <option value="">Select Member</option>
+                                                {teamMembers.map(member => (
+                                                    <option key={member.uid} value={member.fullName}>
+                                                        {member.fullName} ({member.role})
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
                                     </div>
@@ -417,7 +560,6 @@ const ProjectBoard = () => {
                                 </button>
                             </div>
                         </form>
-                        {/* Close button - though not in the image, usually needed. I'll add a small 'X' or click outside */}
                         <div
                             className="modal-close-icon"
                             onClick={() => setIsAddTaskModalOpen(false)}
@@ -525,7 +667,8 @@ const ProjectBoard = () => {
                                             <input
                                                 type="text"
                                                 value={newAssignBy}
-                                                onChange={(e) => setNewAssignBy(e.target.value)}
+                                                readOnly
+                                                className="bg-light"
                                             />
                                         </div>
                                         <div className="form-field">
@@ -533,10 +676,14 @@ const ProjectBoard = () => {
                                             <select
                                                 value={newAssignTo}
                                                 onChange={(e) => setNewAssignTo(e.target.value)}
+                                                required
                                             >
-                                                <option value=""></option>
-                                                <option value="User 1">User 1</option>
-                                                <option value="User 2">User 2</option>
+                                                <option value="">Select Member</option>
+                                                {teamMembers.map(member => (
+                                                    <option key={member.uid} value={member.fullName}>
+                                                        {member.fullName} ({member.role})
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
                                     </div>

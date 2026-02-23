@@ -68,8 +68,30 @@
 .project-item-card:hover {
     transform: none !important;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
-    border-color: #e2e8f0 !important;
+    border-color: #cbd5e1 !important;
 }
+
+/* Selected State - Glow Effect */
+.project-item-card.selected {
+    border-color: #1a4d8c !important;
+    border-width: 1.5px !important;
+    box-shadow: 0 0 15px rgba(26, 77, 140, 0.3) !important;
+    background-color: #f8fbff !important;
+    position: relative;
+}
+
+.project-item-card.selected::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: #1a4d8c;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+
 
 .project-name {
     font-size: 1.1rem;

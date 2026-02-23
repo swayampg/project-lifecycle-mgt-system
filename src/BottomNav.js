@@ -30,7 +30,10 @@ const BottomNav = () => {
             >
                 <Activity size={20} />
             </button>
-            <button className="bottom-nav-btn">
+            <button
+                className={`bottom-nav-btn ${isActive('/Mytask') ? 'active' : ''}`}
+                onClick={() => navigate('/Mytask')}
+            >
                 <Grid size={20} />
             </button>
         </nav>

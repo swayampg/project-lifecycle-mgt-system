@@ -18,17 +18,15 @@ const Home = () => {
     const [invitations, setInvitations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
+    const [selectedProjectId, setSelectedProjectId] = useState(localStorage.getItem('selectedProjectId') || null);
+
 
     const fetchData = async (user) => {
         if (!user) return;
         setLoading(true);
         try {
-            const [projs, invites] = await Promise.all([
-                getUserProjects(user.uid),
-                getInvitationsForUser(user.uid)
-            ]);
+            const projs = await getUserProjects(user.uid);
             setProjects(projs);
-            setInvitations(invites);
         } catch (error) {
             console.error("Error fetching home data:", error);
         } finally {
@@ -37,6 +35,10 @@ const Home = () => {
     };
 
     useEffect(() => {
+        // Clear selected project when visiting Home
+        localStorage.removeItem('selectedProjectId');
+        setSelectedProjectId(null);
+
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             setCurrentUser(user);
             if (user) {
@@ -49,61 +51,12 @@ const Home = () => {
         return () => unsubscribe();
     }, [navigate]);
 
-    const handleInviteResponse = async (invite, accept) => {
-        try {
-            await respondToInvitation(invite, accept);
-            // Refresh data
-            fetchData(currentUser);
-            if (accept) {
-                alert(`Joined ${invite.projectName}!`);
-            }
-        } catch (error) {
-            console.error("Error responding to invitation:", error);
-        }
-    };
-
     return (
         <div className="dashboard-container">
             <Header />
 
             <div className="container mt-4">
-                {/* --- INVITATIONS SECTION --- */}
-                {invitations.length > 0 && (
-                    <div className="invitations-section mb-4">
-                        <div className="d-flex align-items-center gap-2 mb-3">
-                            <Bell className="text-primary" size={20} />
-                            <h5 className="m-0">Pending Invitations</h5>
-                        </div>
-                        <div className="row g-3">
-                            {invitations.map((invite) => (
-                                <div key={invite.id} className="col-md-6 col-lg-4">
-                                    <div className="invite-card p-3 border rounded shadow-sm bg-white d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <div className="fw-bold text-primary">{invite.projectName}</div>
-                                            <div className="small text-muted">
-                                                By {invite.senderName} as <strong>{invite.role}</strong>
-                                            </div>
-                                        </div>
-                                        <div className="d-flex gap-2">
-                                            <button
-                                                className="btn btn-sm btn-success rounded-circle p-1"
-                                                onClick={() => handleInviteResponse(invite, true)}
-                                            >
-                                                <Check size={16} />
-                                            </button>
-                                            <button
-                                                className="btn btn-sm btn-outline-danger rounded-circle p-1"
-                                                onClick={() => handleInviteResponse(invite, false)}
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                {/* --- STAT CARDS SECTION --- */}
 
                 {/* --- STAT CARDS SECTION --- */}
                 <div className="row g-4">
@@ -154,8 +107,12 @@ const Home = () => {
                             {projects.map((project) => (
                                 <div key={project.id} className="col-12">
                                     <div
-                                        className="project-item-card p-3 shadow-sm border rounded-3 bg-white cursor-pointer d-flex justify-content-between align-items-center"
-                                        onClick={() => navigate('/ProjectBoard')}
+                                        className={`project-item-card p-3 shadow-sm border rounded-3 bg-white cursor-pointer d-flex justify-content-between align-items-center ${selectedProjectId === project.proj_id ? 'selected' : ''}`}
+                                        onClick={() => {
+                                            setSelectedProjectId(project.proj_id);
+                                            localStorage.setItem('selectedProjectId', project.proj_id);
+                                            navigate('/project-board');
+                                        }}
                                     >
                                         <div className="project-info-left" style={{ flex: '1' }}>
                                             <h6 className="project-name mb-0 text-primary">{project.Name}</h6>

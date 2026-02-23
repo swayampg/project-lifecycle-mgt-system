@@ -1,28 +1,57 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Settings } from 'lucide-react';
 import { auth, db } from './firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { getUserRoleInProject } from './services/db_services';
 import './Header.css';
 
 const Header = () => {
     const navigate = useNavigate();
     const [userData, setUserData] = useState({ fullName: 'User', role: 'Member', email: '' });
+    const [projectRole, setProjectRole] = useState(null);
     const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
+    const [notificationCount, setNotificationCount] = useState(0);
 
     // Fetch user profile data from Firebase
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // Fetch user profile
                 const docRef = doc(db, "users", user.uid);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     setUserData({ ...docSnap.data(), email: user.email });
                 }
+
+                // Check for project context
+                const selectedProjectId = localStorage.getItem('selectedProjectId');
+                if (selectedProjectId) {
+                    const role = await getUserRoleInProject(selectedProjectId, user.uid);
+                    setProjectRole(role);
+                } else {
+                    setProjectRole(null);
+                }
+
+                // Real-time listener for invitations
+                const inviteQuery = query(
+                    collection(db, "invitations"),
+                    where("recipientUid", "==", user.uid),
+                    where("status", "==", "pending")
+                );
+                const unsubscribeInvites = onSnapshot(inviteQuery, (snapshot) => {
+                    const count = snapshot.size;
+                    // We can add unread notifications count here too if that collection is ready
+                    setNotificationCount(count);
+                });
+
+                return () => {
+                    unsubscribeInvites();
+                };
             }
         });
-        return () => unsubscribe();
+        return () => unsubscribeAuth();
     }, []);
 
     // Close popup when clicking outside
@@ -66,9 +95,11 @@ const Header = () => {
                 />
                 <div>
                     <div className="fw-bold small text-nowrap">{userData.fullName}</div>
-                    <div className="small opacity-75" style={{ fontSize: '11px' }}>
-                        {userData.role || 'Member'}
-                    </div>
+                    {projectRole && (
+                        <div className="small opacity-75" style={{ fontSize: '11px' }}>
+                            {projectRole}
+                        </div>
+                    )}
                 </div>
 
                 {isProfilePopupOpen && (
@@ -120,13 +151,20 @@ const Header = () => {
 
             {/* --- ACTION ICONS --- */}
             <div className="header-actions d-flex align-items-center gap-3">
-                {/* 🔹 FIXED: Connected Bell icon to the Notifications page */}
-                <Bell
-                    size={20}
-                    className="header-icon cursor-pointer"
-                    onClick={() => navigate('/notifications')}
-                    style={{ cursor: 'pointer' }}
-                />
+                <div style={{ position: 'relative' }}>
+                    <Bell
+                        size={20}
+                        className="header-icon cursor-pointer"
+                        onClick={() => navigate('/notifications')}
+                        style={{ cursor: 'pointer' }}
+                    />
+                    {notificationCount > 0 && (
+                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-danger"
+                            style={{ fontSize: '10px', padding: '4px 6px', marginTop: '2px' }}>
+                            {notificationCount}
+                        </span>
+                    )}
+                </div>
                 <Settings
                     size={20}
                     className="header-icon cursor-pointer"
