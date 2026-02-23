@@ -41,6 +41,21 @@ const Profile = () => {
         }
     };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 1024 * 1024) {
+                alert("Image size should be less than 1MB");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setEditData({ ...editData, profilePicture: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
         const user = auth.currentUser;
@@ -48,11 +63,17 @@ const Profile = () => {
 
         try {
             const userRef = doc(db, "users", user.uid);
-            await updateDoc(userRef, {
+            const updatePayload = {
                 fullName: editData.fullName,
                 department: editData.department || '',
                 enrollmentNo: editData.enrollmentNo || '',
-            });
+            };
+
+            if (editData.profilePicture) {
+                updatePayload.profilePicture = editData.profilePicture;
+            }
+
+            await updateDoc(userRef, updatePayload);
             setUserData(editData);
             setIsEditModalOpen(false);
             alert("Profile updated successfully!");
@@ -99,8 +120,12 @@ const Profile = () => {
                         <div className="row g-0 align-items-center">
                             {/* Left Side: Avatar & Name */}
                             <div className="col-md-5 text-center py-5 border-end-light">
-                                <div className="avatar-placeholder large-avatar mb-3">
-                                    <User size={80} color="#878d9fff" strokeWidth={1.5} />
+                                <div className="avatar-placeholder large-avatar mb-3 mx-auto overflow-hidden">
+                                    {userData.profilePicture ? (
+                                        <img src={userData.profilePicture} alt="Profile" className="profile-img-main" />
+                                    ) : (
+                                        <User size={80} color="#878d9fff" strokeWidth={1.5} />
+                                    )}
                                 </div>
                                 <h2 className="profile-user-name">{userData.fullName}</h2>
                             </div>
@@ -152,6 +177,30 @@ const Profile = () => {
                             </button>
                         </div>
                         <form onSubmit={handleUpdateProfile} className="p-4">
+                            <div className="text-center mb-4">
+                                <div className="avatar-upload-container mx-auto position-relative" style={{ width: '120px' }}>
+                                    <div className="avatar-placeholder modal-avatar mx-auto overflow-hidden">
+                                        {editData.profilePicture ? (
+                                            <img src={editData.profilePicture} alt="Preview" className="profile-img-preview" />
+                                        ) : (
+                                            <User size={60} color="#878d9fff" strokeWidth={1.5} />
+                                        )}
+                                    </div>
+                                    <label htmlFor="profile-upload" className="avatar-upload-label position-absolute bottom-0 end-0 cursor-pointer">
+                                        <div className="upload-icon-circle bg-primary text-white p-2 rounded-circle shadow-sm">
+                                            <Edit2 size={16} />
+                                        </div>
+                                    </label>
+                                    <input
+                                        id="profile-upload"
+                                        type="file"
+                                        accept="image/*"
+                                        className="d-none"
+                                        onChange={handleFileChange}
+                                    />
+                                </div>
+                                <p className="small text-muted mt-2">Click icon to change picture</p>
+                            </div>
                             <div className="mb-4">
                                 <label className="form-label fw-bold small text-secondary">FULL NAME</label>
                                 <input
