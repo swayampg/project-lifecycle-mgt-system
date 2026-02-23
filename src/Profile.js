@@ -12,6 +12,7 @@ const Profile = () => {
     const [loading, setLoading] = useState(true);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editData, setEditData] = useState({});
+    const [isUpdating, setIsUpdating] = useState(false); // NEW: State for the update button loading
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -61,6 +62,8 @@ const Profile = () => {
         const user = auth.currentUser;
         if (!user) return;
 
+        setIsUpdating(true); // NEW: Start loading swap
+
         try {
             const userRef = doc(db, "users", user.uid);
             const updatePayload = {
@@ -80,6 +83,8 @@ const Profile = () => {
         } catch (error) {
             console.error("Error updating profile:", error);
             alert("Failed to update profile.");
+        } finally {
+            setIsUpdating(false); // NEW: Reset loading state
         }
     };
 
@@ -236,8 +241,20 @@ const Profile = () => {
                                     placeholder="Enter your enrollment number"
                                 />
                             </div>
-                            <button type="submit" className="btn btn-primary w-100 save-btn py-3 mt-2">
-                                Update Profile Details
+                            
+                            {/* MODIFIED: Button swaps text and shows spinner based on isUpdating state */}
+                            <button 
+                                type="submit" 
+                                className="btn btn-primary w-100 save-btn py-3 mt-2 d-flex align-items-center justify-content-center gap-2"
+                                disabled={isUpdating}
+                            >
+                                {isUpdating ? (
+                                    <>
+                                        <span className="spinner-border-custom"></span> Updating Profile Details...
+                                    </>
+                                ) : (
+                                    "Update Profile Details"
+                                )}
                             </button>
                         </form>
                     </div>

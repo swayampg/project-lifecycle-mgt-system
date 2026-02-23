@@ -25,6 +25,7 @@ const CreateProject = () => {
   const [invitationData, setInvitationData] = useState({ email: '', role: 'Member' });
   const [invitedMembers, setInvitedMembers] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isCreating, setIsCreating] = useState(false); // NEW: State for the Create Project button
   const [currentUser, setCurrentUser] = useState(null);
 
   // 1. Auto-add creator on mount
@@ -128,6 +129,8 @@ const CreateProject = () => {
       return;
     }
 
+    setIsCreating(true); // NEW: Swap text and disable button immediately
+
     try {
       // Find the creator's role from the list
       const creator = invitedMembers.find(m => m.isCreator);
@@ -147,6 +150,7 @@ const CreateProject = () => {
     } catch (error) {
       console.error("Error creating project: ", error);
       alert('Error creating project. Please try again.');
+      setIsCreating(false); // NEW: Re-enable button if there's an error so they can try again
     }
   };
 
@@ -256,7 +260,16 @@ const CreateProject = () => {
                   </div>
                 </div>
 
-                <button type="submit" className="btn-create">Create Project</button>
+                {/* MODIFIED: Button now swaps text and shows a loading state */}
+                <button type="submit" className="btn-create" disabled={isCreating}>
+                  {isCreating ? (
+                    <>
+                      <span className="spinner-border-custom"></span> Creating Project...
+                    </>
+                  ) : (
+                    "Create Project"
+                  )}
+                </button>
               </div>
 
               {/* Team panel */}
