@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Search, Trash2 } from 'lucide-react';
+import Swal from 'sweetalert2'; // Import SweetAlert2
 import './CreateProject.css';
 import Header from './Header';
 import BottomNav from './BottomNav';
@@ -72,7 +73,11 @@ const CreateProject = () => {
     if (invitationData.role === 'Leader' || invitationData.role === 'Mentor') {
       const alreadyExists = invitedMembers.some(m => m.role === invitationData.role);
       if (alreadyExists) {
-        alert(`A project can only have one ${invitationData.role}.`);
+        Swal.fire({
+          icon: 'warning',
+          title: 'Limit Reached',
+          text: `A project can only have one ${invitationData.role}.`,
+        });
         return;
       }
     }
@@ -82,7 +87,10 @@ const CreateProject = () => {
       const user = await findUserByEmail(invitationData.email);
       if (user) {
         if (invitedMembers.some(m => m.uid === user.uid)) {
-          alert("User is already in the team list.");
+          Swal.fire({
+            icon: 'info',
+            text: "User is already in the team list.",
+          });
           return;
         }
 
@@ -90,7 +98,11 @@ const CreateProject = () => {
         setInvitationData({ email: '', role: 'Member' });
         setIsModalOpen(false);
       } else {
-        alert("No user found with this email. Only registered users can be invited.");
+        Swal.fire({
+          icon: 'error',
+          title: 'User Not Found',
+          text: "No user found with this email. Only registered users can be invited.",
+        });
       }
     } catch (error) {
       console.error("Error searching user:", error);
@@ -108,7 +120,10 @@ const CreateProject = () => {
     if (newRole === 'Leader' || newRole === 'Mentor') {
       const alreadyExists = invitedMembers.some(m => m.role === newRole && m.uid !== uid);
       if (alreadyExists) {
-        alert(`A project can only have one ${newRole}.`);
+        Swal.fire({
+          icon: 'warning',
+          text: `A project can only have one ${newRole}.`,
+        });
         return;
       }
     }
@@ -119,13 +134,19 @@ const CreateProject = () => {
     e.preventDefault();
 
     if (new Date(formData.endDate) < new Date(formData.startDate)) {
-      alert('End date cannot be before start date');
+      Swal.fire({
+        icon: 'error',
+        text: 'End date cannot be before start date',
+      });
       return;
     }
 
     const user = auth.currentUser;
     if (!user) {
-      alert("You must be logged in to create a project.");
+      Swal.fire({
+        icon: 'auth-error',
+        text: "You must be logged in to create a project.",
+      });
       return;
     }
 
@@ -145,11 +166,21 @@ const CreateProject = () => {
         await sendInvitation({ proj_id, Name: formData.projectTitle, projectLeader: formData.projectLeader }, member, member.role);
       }
 
-      alert('Project created and invitations sent!');
+      await Swal.fire({
+        icon: 'success',
+        title: 'Project Created Successfully!!',
+        text: 'Project created and invitations sent!',
+        timer: 2000,
+        showConfirmButton: false
+      });
       navigate('/Home');
     } catch (error) {
       console.error("Error creating project: ", error);
-      alert('Error creating project. Please try again.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Creation Failed',
+        text: 'Error creating project. Please try again.',
+      });
       setIsCreating(false); // NEW: Re-enable button if there's an error so they can try again
     }
   };

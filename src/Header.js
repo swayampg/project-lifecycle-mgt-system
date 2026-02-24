@@ -1,37 +1,34 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Settings } from 'lucide-react';
+import { Search, Bell, Settings, User as UserIcon } from 'lucide-react';
 import { auth, db } from './firebaseConfig';
-import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { doc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getUserRoleInProject } from './services/db_services';
 import './Header.css';
 
 const Header = () => {
     const navigate = useNavigate();
-    const [userData, setUserData] = useState({ fullName: 'User', role: 'Member', email: '' });
+    const [userData, setUserData] = useState({ fullName: 'User', role: 'Member', email: '', profilePicture: '' });
     const [projectRole, setProjectRole] = useState(null);
     const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
     const [notificationCount, setNotificationCount] = useState(0);
 
-    // Fetch user profile data from Firebase
     useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Fetch user profile
-                const docRef = doc(db, "users", user.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setUserData({ ...docSnap.data(), email: user.email });
-                }
+                // CHANGED: Use onSnapshot for real-time profile updates
+                const userDocRef = doc(db, "users", user.uid);
+                const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        setUserData({ ...docSnap.data(), email: user.email });
+                    }
+                });
 
                 // Check for project context
                 const selectedProjectId = localStorage.getItem('selectedProjectId');
                 if (selectedProjectId) {
-                    const role = await getUserRoleInProject(selectedProjectId, user.uid);
-                    setProjectRole(role);
-                } else {
-                    setProjectRole(null);
+                    getUserRoleInProject(selectedProjectId, user.uid).then(setProjectRole);
                 }
 
                 // Real-time listener for invitations
@@ -41,12 +38,11 @@ const Header = () => {
                     where("status", "==", "pending")
                 );
                 const unsubscribeInvites = onSnapshot(inviteQuery, (snapshot) => {
-                    const count = snapshot.size;
-                    // We can add unread notifications count here too if that collection is ready
-                    setNotificationCount(count);
+                    setNotificationCount(snapshot.size);
                 });
 
                 return () => {
+                    unsubscribeUser();
                     unsubscribeInvites();
                 };
             }
@@ -54,7 +50,6 @@ const Header = () => {
         return () => unsubscribeAuth();
     }, []);
 
-    // Close popup when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (isProfilePopupOpen && !event.target.closest('.header-profile-section') && !event.target.closest('.profile-dropdown-popup')) {
@@ -81,18 +76,25 @@ const Header = () => {
 
     return (
         <header className="main-header d-flex justify-content-between align-items-center">
-            {/* --- PROFILE SECTION --- */}
             <div
                 className="header-profile-section d-flex align-items-center"
                 onClick={togglePopup}
                 style={{ cursor: 'pointer', position: 'relative' }}
             >
-                <img
-                    src="https://via.placeholder.com/150"
-                    alt="Profile"
-                    className="me-2 rounded-circle"
-                    style={{ width: '35px', height: '35px' }}
-                />
+                {/* CHANGED: Dynamic image source from userData */}
+                {userData.profilePicture ? (
+                    <img
+                        src={userData.profilePicture}
+                        alt="Profile"
+                        className="me-2 rounded-circle"
+                        style={{ width: '35px', height: '35px', objectFit: 'cover' }}
+                    />
+                ) : (
+                    <div className="me-2 rounded-circle bg-light d-flex align-items-center justify-content-center" style={{ width: '35px', height: '35px' }}>
+                        <UserIcon size={20} color="#878d9fff" />
+                    </div>
+                )}
+                
                 <div>
                     <div className="fw-bold small text-nowrap">{userData.fullName}</div>
                     {projectRole && (
@@ -105,12 +107,19 @@ const Header = () => {
                 {isProfilePopupOpen && (
                     <div className="profile-dropdown-popup shadow" onClick={(e) => e.stopPropagation()}>
                         <div className="profile-popup-header d-flex align-items-center mb-3">
-                            <img
-                                src="https://via.placeholder.com/150"
-                                alt="Profile Large"
-                                className="rounded-circle me-3"
-                                style={{ width: '50px', height: '50px' }}
-                            />
+                            {/* CHANGED: Dynamic image in popup */}
+                            {userData.profilePicture ? (
+                                <img
+                                    src={userData.profilePicture}
+                                    alt="Profile Large"
+                                    className="rounded-circle me-3"
+                                    style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                                />
+                            ) : (
+                                <div className="rounded-circle me-3 bg-light d-flex align-items-center justify-content-center" style={{ width: '50px', height: '50px' }}>
+                                    <UserIcon size={30} color="#878d9fff" />
+                                </div>
+                            )}
                             <div className="overflow-hidden">
                                 <div className="fw-bold text-dark text-truncate">{userData.fullName}</div>
                                 <div className="text-muted small text-truncate">{userData.email}</div>
@@ -135,7 +144,6 @@ const Header = () => {
                 )}
             </div>
 
-            {/* --- SEARCH BOX --- */}
             <div className="header-search-box">
                 <div className="input-group input-group-sm">
                     <span className="input-group-text bg-white border-end-0">
@@ -149,14 +157,12 @@ const Header = () => {
                 </div>
             </div>
 
-            {/* --- ACTION ICONS --- */}
             <div className="header-actions d-flex align-items-center gap-3">
                 <div style={{ position: 'relative' }}>
                     <Bell
                         size={20}
                         className="header-icon cursor-pointer"
                         onClick={() => navigate('/notifications')}
-                        style={{ cursor: 'pointer' }}
                     />
                     {notificationCount > 0 && (
                         <span className="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-danger"
@@ -168,7 +174,6 @@ const Header = () => {
                 <Settings
                     size={20}
                     className="header-icon cursor-pointer"
-                    style={{ cursor: 'pointer' }}
                 />
             </div>
         </header>

@@ -3,6 +3,7 @@ import { db, auth } from './firebaseConfig';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Edit2, X, User, Building, CreditCard } from 'lucide-react';
+import Swal from 'sweetalert2'; // Added SweetAlert2 import
 import Header from './Header';
 import BottomNav from './BottomNav';
 import './Profile.css';
@@ -46,7 +47,13 @@ const Profile = () => {
         const file = e.target.files[0];
         if (file) {
             if (file.size > 1024 * 1024) {
-                alert("Image size should be less than 1MB");
+                // Changed to SweetAlert2
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'File too large',
+                    text: 'Image size should be less than 1MB',
+                    confirmButtonColor: '#3085d6'
+                });
                 return;
             }
             const reader = new FileReader();
@@ -79,10 +86,25 @@ const Profile = () => {
             await updateDoc(userRef, updatePayload);
             setUserData(editData);
             setIsEditModalOpen(false);
-            alert("Profile updated successfully!");
+            
+            // Changed to SweetAlert2
+            Swal.fire({
+                icon: 'success',
+                title: 'Updated!',
+                text: 'Profile updated successfully!',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
         } catch (error) {
             console.error("Error updating profile:", error);
-            alert("Failed to update profile.");
+            
+            // Changed to SweetAlert2
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Failed to update profile.',
+            });
         } finally {
             setIsUpdating(false); // NEW: Reset loading state
         }
@@ -242,7 +264,6 @@ const Profile = () => {
                                 />
                             </div>
                             
-                            {/* MODIFIED: Button swaps text and shows spinner based on isUpdating state */}
                             <button 
                                 type="submit" 
                                 className="btn btn-primary w-100 save-btn py-3 mt-2 d-flex align-items-center justify-content-center gap-2"
