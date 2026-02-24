@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from './firebaseConfig';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import Swal from 'sweetalert2'; // 1. Import SweetAlert2
 import './Login.css';
 
 const Login = () => {
@@ -18,10 +19,26 @@ const Login = () => {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      alert("Login Successful!");
+      
+      // 2. Success Alert
+      Swal.fire({
+        title: 'Success!',
+        text: 'Login Successful!',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+
       navigate('/home');
     } catch (error) {
-      alert("Login Failed: " + error.message);
+      // 3. Error Alert
+      Swal.fire({
+        title: 'Login Failed',
+        text: error.message,
+        icon: 'error',
+        confirmButtonColor: '#1a4d8c', // Matches your button color
+        confirmButtonText: 'Try Again'
+      });
     } finally {
       setLoading(false);
     }
