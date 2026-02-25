@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from './firebaseConfig';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, db, googleProvider } from './firebaseConfig';
+import { signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2'; // 1. Import SweetAlert2
 import './Login.css';
 
@@ -18,9 +19,29 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      
-      // 2. Success Alert
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. Check if Email is Verified
+      if (!user.emailVerified) {
+        await signOut(auth);
+        Swal.fire({
+          title: 'Email Not Verified',
+          text: 'Please verify your email before logging in. Check your inbox for the verification link.',
+          icon: 'warning',
+          confirmButtonColor: '#1a4d8c',
+          confirmButtonText: 'Resend Email'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Optional: You could trigger resend here if desired
+            // For now, just a polite reminder
+          }
+        });
+        setLoading(false);
+        return;
+      }
+
+      // 3. Success Alert
       Swal.fire({
         title: 'Success!',
         text: 'Login Successful!',
@@ -37,6 +58,41 @@ const Login = () => {
         text: error.message,
         icon: 'error',
         confirmButtonColor: '#1a4d8c', // Matches your button color
+        confirmButtonText: 'Try Again'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const userCredential = await signInWithPopup(auth, googleProvider);
+      const user = userCredential.user;
+
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        fullName: user.displayName || "User",
+        email: user.email,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+
+      Swal.fire({
+        title: 'Success!',
+        text: 'Login Successful!',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      navigate('/home');
+    } catch (error) {
+      Swal.fire({
+        title: 'Login Failed',
+        text: error.message,
+        icon: 'error',
+        confirmButtonColor: '#1a4d8c',
         confirmButtonText: 'Try Again'
       });
     } finally {
@@ -95,6 +151,17 @@ const Login = () => {
             style={{ backgroundColor: '#1a4d8c', padding: '12px' }}
           >
             {loading ? "Checking..." : "Log In"}
+          </button>
+
+          <button
+            type="button"
+            disabled={loading}
+            className="btn w-100 fw-bold text-dark mt-2 border d-flex align-items-center justify-content-center"
+            style={{ backgroundColor: '#fff', padding: '12px' }}
+            onClick={handleGoogleLogin}
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '20px', marginRight: '10px' }} />
+            Sign in with Google
           </button>
 
           <div className="text-center mt-3">

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { auth, db } from './firebaseConfig';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth, db, googleProvider } from './firebaseConfig';
+import { createUserWithEmailAndPassword, signInWithPopup, sendEmailVerification, signOut } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import './Login.css';
 
 const Signup = () => {
@@ -29,10 +30,62 @@ const Signup = () => {
                 createdAt: serverTimestamp()
             });
 
-            alert("Account Created Successfully!");
+            // 3. Send Verification Email
+            await sendEmailVerification(user);
+
+            // 4. Sign Out until verified
+            await signOut(auth);
+
+            Swal.fire({
+                title: 'Verify Your Email',
+                text: 'A verification link has been sent to your email. Please verify before logging in.',
+                icon: 'info',
+                confirmButtonColor: '#1a4d8c',
+                confirmButtonText: 'Got it'
+            });
             navigate('/');
         } catch (error) {
-            alert("Signup Failed: " + error.message);
+            Swal.fire({
+                title: 'Signup Failed',
+                text: error.message,
+                icon: 'error',
+                confirmButtonColor: '#1a4d8c',
+                confirmButtonText: 'Try Again'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleSignup = async () => {
+        setLoading(true);
+        try {
+            const userCredential = await signInWithPopup(auth, googleProvider);
+            const user = userCredential.user;
+
+            await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                fullName: user.displayName || "User",
+                email: user.email,
+                createdAt: serverTimestamp()
+            }, { merge: true });
+
+            Swal.fire({
+                title: 'Success!',
+                text: 'Account Created Successfully!',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            navigate('/');
+        } catch (error) {
+            Swal.fire({
+                title: 'Google Signup Failed',
+                text: error.message,
+                icon: 'error',
+                confirmButtonColor: '#1a4d8c',
+                confirmButtonText: 'Try Again'
+            });
         } finally {
             setLoading(false);
         }
@@ -87,6 +140,10 @@ const Signup = () => {
                     </div>
                     <button type="submit" disabled={loading} className="btn w-100 fw-bold text-white" style={{ backgroundColor: '#1a4d8c' }}>
                         {loading ? "Creating Account..." : "Create Account"}
+                    </button>
+                    <button type="button" disabled={loading} className="btn w-100 fw-bold text-dark mt-2 border d-flex align-items-center justify-content-center" style={{ backgroundColor: '#fff' }} onClick={handleGoogleSignup}>
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '20px', marginRight: '10px' }} />
+                        Sign up with Google
                     </button>
                     <button type="button" className="btn btn-link w-100 mt-2 text-decoration-none text-muted" onClick={() => navigate('/')}>
                         Already have an account? Login
