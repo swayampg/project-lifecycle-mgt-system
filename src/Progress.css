@@ -125,6 +125,84 @@
     font-weight: bold;
 }
 
+/* Progress Overview Layout */
+.progress-main-layout {
+    display: flex;
+    gap: 40px;
+    /* align-items: flex-start removed to allow sidebar height to match timeline */
+}
+
+.timeline-section {
+    flex: 2;
+    max-width: 600px;
+}
+
+.progress-sidebar {
+    flex: 1.5;
+    min-width: 500px;
+    position: relative;
+    /* Container for sticky child if needed, or just let it stretch */
+}
+
+.sidebar-overview-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    position: sticky;
+    top: 50vh;
+    /* Centering point */
+    transform: translateY(-50%);
+    /* Centering relative to its target sticky position */
+    z-index: 5;
+    padding: 20px 0;
+}
+
+.sidebar-heading {
+    color: #1a4d8c;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    margin-bottom: 30px;
+    /* Reduced from 40px to prevent overlap with massive chart */
+    text-align: center;
+    width: 100%;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background: #f8f9fa;
+    /* Match background to ensure readability if overlapping slightly */
+    padding: 5px;
+    z-index: 6;
+}
+
+/* Pie Chart Visual */
+.pie-chart-container {
+    width: 450px;
+    /* Massive chart */
+    height: 450px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+    background: white;
+}
+
+.pie-chart-center {
+    width: 330px;
+    height: 330px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 900;
+    font-size: 5rem;
+    /* Massive text */
+    color: #2c3e50;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
 .no-data-msg {
     color: #666;
     font-style: italic;

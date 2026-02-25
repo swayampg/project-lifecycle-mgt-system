@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-// Lucide-react icons for the top and bottom navigation consistency
-import { Search, Bell, Settings } from 'lucide-react';
+// Lucide-react icons for consistency
+import { } from 'lucide-react'; // Removing unused icons
 import './Progress.css'; // Standardized naming for your CSS file
 import BottomNav from './BottomNav';
 import Header from './Header';
@@ -49,8 +49,23 @@ const Progress = () => {
         fetchProgressData();
     }, [projectId]);
 
+    const calculateOverallProgress = () => {
+        let totalTasks = 0;
+        let completedTasks = 0;
+
+        phases.forEach(phase => {
+            totalTasks += phase.tasks.length;
+            completedTasks += phase.tasks.filter(t => t.completed).length;
+        });
+
+        if (totalTasks === 0) return 0;
+        return Math.round((completedTasks / totalTasks) * 100);
+    };
+
+    const overallProgress = calculateOverallProgress();
+
     const calculateProgress = (tasks) => {
-        if (!tasks || tasks.length === 0) return 100; // Requirement: 100% if no tasks
+        if (!tasks || tasks.length === 0) return 0; // Requirement: 0% if no tasks
         const completedCount = tasks.filter(t => t.completed).length;
         return Math.round((completedCount / tasks.length) * 100);
     };
@@ -77,48 +92,72 @@ const Progress = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="timeline-list">
-                        {phases.length > 0 ? (
-                            phases.map((phase) => {
-                                const total = phase.tasks ? phase.tasks.length : 0;
-                                const completed = phase.tasks ? phase.tasks.filter(t => t.completed).length : 0;
-                                const progress = calculateProgress(phase.tasks);
+                    <div className="progress-content-wrapper">
+                        <div className="progress-main-layout">
+                            <div className="timeline-section">
+                                <div className="timeline-list">
+                                    {phases.length > 0 ? (
+                                        phases.map((phase) => {
+                                            const total = phase.tasks ? phase.tasks.length : 0;
+                                            const completed = phase.tasks ? phase.tasks.filter(t => t.completed).length : 0;
+                                            const progress = calculateProgress(phase.tasks);
 
-                                return (
-                                    <div key={phase.id} className="timeline-card">
-                                        <div className="card-blue-accent"></div>
-                                        <div className="card-body-content">
-                                            <h3 className="card-project-title">{phase.title}</h3>
-                                            <p className="card-project-desc">Phase progress tracking</p>
+                                            return (
+                                                <div key={phase.id} className="timeline-card">
+                                                    <div className="card-blue-accent"></div>
+                                                    <div className="card-body-content">
+                                                        <h3 className="card-project-title">{phase.title}</h3>
+                                                        <p className="card-project-desc">Phase progress tracking</p>
 
-                                            <div className="card-stats-row">
-                                                <div className="progress-bar-container">
-                                                    <div
-                                                        className="progress-bar-fill"
-                                                        style={{ width: `${progress}%` }}
-                                                    ></div>
+                                                        <div className="card-stats-row">
+                                                            <div className="progress-bar-container">
+                                                                <div
+                                                                    className="progress-bar-fill"
+                                                                    style={{ width: `${progress}%` }}
+                                                                ></div>
+                                                            </div>
+                                                            <div className="stats-text">
+                                                                <div>Total Tasks: {total}</div>
+                                                                <div>Completed: {completed}</div>
+                                                                <div className="progress-percentText">{progress}%</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="stats-text">
-                                                    <div>Total Tasks: {total}</div>
-                                                    <div>Completed: {completed}</div>
-                                                    <div className="progress-percentText">{progress}%</div>
-                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="no-data-msg">
+                                            {projectId ? "No phases found. Create them in the Project Board." : "No project selected. Please select a project from the Home page."}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <aside className="progress-sidebar">
+                                {phases.length > 0 && (
+                                    <div className="sidebar-overview-content">
+                                        <h4 className="sidebar-heading">OVERALL PROGRESS</h4>
+                                        <div
+                                            className="pie-chart-container"
+                                            style={{
+                                                background: `conic-gradient(#2ecc71 ${overallProgress}%, #e9ecef 0)`
+                                            }}
+                                        >
+                                            <div className="pie-chart-center">
+                                                <span>{overallProgress}%</span>
                                             </div>
                                         </div>
                                     </div>
-                                );
-                            })
-                        ) : (
-                            <div className="no-data-msg">
-                                {projectId ? "No phases found. Create them in the Project Board." : "No project selected. Please select a project from the Home page."}
-                            </div>
-                        )}
+                                )}
+                            </aside>
+                        </div>
                     </div>
                 )}
-            </main>
+            </main >
 
             <BottomNav />
-        </div>
+        </div >
     );
 };
 
