@@ -1,5 +1,5 @@
 import { db } from '../firebaseConfig';
-import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, limit } from 'firebase/firestore';
 
 /**
  * Finds a user by their email address.
@@ -108,18 +108,30 @@ export const getProjectById = async (projId) => {
  */
 export const getUserProjects = async (userUid) => {
     try {
-        // 1. Get all team memberships for the user
         const teamQuery = query(collection(db, "projectTeam"), where("uid", "==", userUid));
         const teamSnapshot = await getDocs(teamQuery);
-        const projIds = teamSnapshot.docs.map(doc => doc.data().prjid);
+        if (teamSnapshot.empty) return [];
 
-        if (projIds.length === 0) return [];
+        const memberships = {};
+        teamSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            memberships[data.prjid] = data;
+        });
 
-        // 2. Fetch the actual project data for those IDs
-        const projectsQuery = query(collection(db, "projects"), where("proj_id", "in", projIds));
-        const projectsSnapshot = await getDocs(projectsQuery);
+        const projIds = Object.keys(memberships);
+        // Firestore 'in' query limited to 30 items
+        const projectsSnapshot = await getDocs(query(collection(db, "projects"), where("proj_id", "in", projIds)));
 
-        return projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return projectsSnapshot.docs.map(doc => {
+            const projData = doc.data();
+            const membership = memberships[projData.proj_id];
+            return {
+                id: doc.id,
+                ...projData,
+                userRole: membership?.role || "Member",
+                userConsent: membership?.consentToDelete || false
+            };
+        });
     } catch (error) {
         console.error("Error fetching user projects:", error);
         return [];
@@ -204,7 +216,8 @@ export const getProjectTeamMembers = async (projId) => {
                 teamMembers.push({
                     uid: memberData.uid,
                     fullName: userDoc.data().fullName,
-                    role: memberData.role
+                    role: memberData.role,
+                    consentToDelete: memberData.consentToDelete || false
                 });
             }
         }
@@ -417,3 +430,172 @@ export const getUserRoleInProject = async (projId, userUid) => {
     }
     return null;
 };
+
+/**
+ * Adds a new news item to the project.
+ */
+export const addNews = async (newsData) => {
+    try {
+        await addDoc(collection(db, "news"), {
+            ...newsData,
+            createdAt: new Date()
+        });
+    } catch (error) {
+        console.error("Error adding news:", error);
+        throw error;
+    }
+};
+
+/**
+ * Fetches the latest news for a specific project.
+ */
+export const getLatestNews = async (projId) => {
+    try {
+        const q = query(
+            collection(db, "news"),
+            where("prjid", "==", projId),
+            orderBy("createdAt", "desc"),
+            limit(1)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+        }
+    } catch (error) {
+        console.error("Error fetching latest news:", error);
+    }
+    return null;
+};
+/**
+ * Deletes a project and all its associated data (team, phases, tasks, news, invitations).
+ * @param {string} projId 
+ * @returns {Promise<void>}
+ */
+export const deleteProject = async (projId) => {
+    try {
+        // 1. Delete project document
+        const projQuery = query(collection(db, "projects"), where("proj_id", "==", projId));
+        const projSnap = await getDocs(projQuery);
+        const projectDeletePromises = projSnap.docs.map(d => deleteDoc(d.ref));
+
+        // 2. Delete team members
+        const teamQuery = query(collection(db, "projectTeam"), where("prjid", "==", projId));
+        const teamSnap = await getDocs(teamQuery);
+        const teamDeletePromises = teamSnap.docs.map(d => deleteDoc(d.ref));
+
+        // 3. Delete phases
+        const phaseQuery = query(collection(db, "project-phases"), where("proj_id", "==", projId));
+        const phaseSnap = await getDocs(phaseQuery);
+        const phaseDeletePromises = phaseSnap.docs.map(d => deleteDoc(d.ref));
+
+        // 4. Delete tasks (find tasks using phase IDs)
+        const phaseIds = phaseSnap.docs.map(d => d.id);
+        let taskDeletePromises = [];
+        if (phaseIds.length > 0) {
+            const taskQuery = query(collection(db, "Tasks"), where("phaseId", "in", phaseIds));
+            const taskSnap = await getDocs(taskQuery);
+            taskDeletePromises = taskSnap.docs.map(d => deleteDoc(d.ref));
+        }
+
+        // 5. Delete news
+        const newsQuery = query(collection(db, "news"), where("prjid", "==", projId));
+        const newsSnap = await getDocs(newsQuery);
+        const newsDeletePromises = newsSnap.docs.map(d => deleteDoc(d.ref));
+
+        // 6. Delete invitations
+        const inviteQuery = query(collection(db, "invitations"), where("prjid", "==", projId));
+        const inviteSnap = await getDocs(inviteQuery);
+        const inviteDeletePromises = inviteSnap.docs.map(d => deleteDoc(d.ref));
+
+        await Promise.all([
+            ...projectDeletePromises,
+            ...teamDeletePromises,
+            ...phaseDeletePromises,
+            ...taskDeletePromises,
+            ...newsDeletePromises,
+            ...inviteDeletePromises
+        ]);
+    } catch (error) {
+        console.error("Error deleting project:", error);
+        throw error;
+    }
+};
+
+/**
+ * Checks if a user already has a pending invitation for a project.
+ */
+export const getExistingInvitationsByProject = async (projId, userUid) => {
+    try {
+        const q = query(
+            collection(db, "invitations"),
+            where("prjid", "==", projId),
+            where("recipientUid", "==", userUid),
+            where("status", "==", "pending")
+        );
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error checking existing invitations:", error);
+        return [];
+    }
+};
+
+/**
+ * Initiates a deletion request for a project.
+ */
+export const requestProjectDeletion = async (projId) => {
+    try {
+        const q = query(collection(db, "projects"), where("proj_id", "==", projId));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            await updateDoc(snap.docs[0].ref, { deletionStatus: "pending" });
+        }
+    } catch (error) {
+        console.error("Error requesting deletion:", error);
+        throw error;
+    }
+};
+
+/**
+ * Cancels a deletion request and clears all member consents.
+ */
+export const cancelProjectDeletion = async (projId) => {
+    try {
+        // 1. Reset project status
+        const q = query(collection(db, "projects"), where("proj_id", "==", projId));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            await updateDoc(snap.docs[0].ref, { deletionStatus: null });
+        }
+
+        // 2. Clear member consents
+        const teamQ = query(collection(db, "projectTeam"), where("prjid", "==", projId));
+        const teamSnap = await getDocs(teamQ);
+        const resetPromises = teamSnap.docs.map(d => updateDoc(d.ref, { consentToDelete: false }));
+        await Promise.all(resetPromises);
+    } catch (error) {
+        console.error("Error cancelling deletion:", error);
+        throw error;
+    }
+};
+
+/**
+ * Updates a member's consent status for project deletion.
+ */
+export const updateMemberConsent = async (projId, uid, consent) => {
+    try {
+        const q = query(
+            collection(db, "projectTeam"),
+            where("prjid", "==", projId),
+            where("uid", "==", uid)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            await updateDoc(snap.docs[0].ref, { consentToDelete: consent });
+        }
+    } catch (error) {
+        console.error("Error updating consent:", error);
+        throw error;
+    }
+};
+
