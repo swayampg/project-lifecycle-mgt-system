@@ -12,6 +12,8 @@ import Mytask from './Mytask';
 import ProfileOverview from './ProfileOverview';
 import Notifications from './Notifications';
 import MentorDashboard from './mentorDashboard';
+import Reviewtask from './Reviewtask';
+
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -31,6 +33,8 @@ function App() {
         <Route path="/profile-overview" element={<ProfileOverview />} />
         <Route path="/Notifications" element={<Notifications />} />
         <Route path="/mentorDashboard" element={<MentorDashboard />} />
+        <Route path="/Reviewtask" element={<Reviewtask />} />
+
       </Routes>
     </Router>
   );
