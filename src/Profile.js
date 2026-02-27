@@ -3,7 +3,7 @@ import { db, auth } from './firebaseConfig';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Edit2, X, User, Building, CreditCard } from 'lucide-react';
-import Swal from 'sweetalert2'; // Added SweetAlert2 import
+import Swal from 'sweetalert2';
 import Header from './Header';
 import BottomNav from './BottomNav';
 import './Profile.css';
@@ -13,7 +13,7 @@ const Profile = () => {
     const [loading, setLoading] = useState(true);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editData, setEditData] = useState({});
-    const [isUpdating, setIsUpdating] = useState(false); // NEW: State for the update button loading
+    const [isUpdating, setIsUpdating] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -47,7 +47,6 @@ const Profile = () => {
         const file = e.target.files[0];
         if (file) {
             if (file.size > 1024 * 1024) {
-                // Changed to SweetAlert2
                 Swal.fire({
                     icon: 'warning',
                     title: 'File too large',
@@ -66,10 +65,21 @@ const Profile = () => {
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
+        
+        // --- NEW: VALIDATION FOR 10 DIGITS ---
+        if (editData.enrollmentNo && editData.enrollmentNo.length !== 10) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Enrollment',
+                text: 'Enrollment number must be exactly 10 digits.',
+            });
+            return;
+        }
+
         const user = auth.currentUser;
         if (!user) return;
 
-        setIsUpdating(true); // NEW: Start loading swap
+        setIsUpdating(true);
 
         try {
             const userRef = doc(db, "users", user.uid);
@@ -87,7 +97,6 @@ const Profile = () => {
             setUserData(editData);
             setIsEditModalOpen(false);
             
-            // Changed to SweetAlert2
             Swal.fire({
                 icon: 'success',
                 title: 'Updated!',
@@ -98,15 +107,13 @@ const Profile = () => {
 
         } catch (error) {
             console.error("Error updating profile:", error);
-            
-            // Changed to SweetAlert2
             Swal.fire({
                 icon: 'error',
                 title: 'Oops...',
                 text: 'Failed to update profile.',
             });
         } finally {
-            setIsUpdating(false); // NEW: Reset loading state
+            setIsUpdating(false);
         }
     };
 
@@ -145,7 +152,6 @@ const Profile = () => {
 
                     <div className="profile-card horizontal-layout shadow-sm animate-fade-in mb-5">
                         <div className="row g-0 align-items-center">
-                            {/* Left Side: Avatar & Name */}
                             <div className="col-md-5 text-center py-5 border-end-light">
                                 <div className="avatar-placeholder large-avatar mb-3 mx-auto overflow-hidden">
                                     {userData.profilePicture ? (
@@ -157,7 +163,6 @@ const Profile = () => {
                                 <h2 className="profile-user-name">{userData.fullName}</h2>
                             </div>
 
-                            {/* Right Side: Detailed Details */}
                             <div className="col-md-7 p-4 p-md-5">
                                 <div className="image-style-details">
                                     <div className="img-detail-item">
@@ -193,7 +198,6 @@ const Profile = () => {
                 </div>
             </main>
 
-            {/* Edit Profile Modal */}
             {isEditModalOpen && (
                 <div className="modal-overlay">
                     <div className="edit-modal-content animate-fade-in">
@@ -259,9 +263,18 @@ const Profile = () => {
                                     type="text"
                                     className="form-control"
                                     value={editData.enrollmentNo || ''}
-                                    onChange={(e) => setEditData({ ...editData, enrollmentNo: e.target.value })}
-                                    placeholder="Enter your enrollment number"
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        // --- INTEGRATED: LIMIT TO 10 DIGITS AND NUMBERS ONLY ---
+                                        if (val.length <= 10 && /^[0-9]*$/.test(val)) {
+                                            setEditData({ ...editData, enrollmentNo: val });
+                                        }
+                                    }}
+                                    placeholder="Enter 10-digit number"
                                 />
+                                <div className="text-end small text-muted mt-1">
+                                    {editData.enrollmentNo?.length || 0}/10
+                                </div>
                             </div>
                             
                             <button 
@@ -286,5 +299,4 @@ const Profile = () => {
         </div>
     );
 };
-
 export default Profile;
