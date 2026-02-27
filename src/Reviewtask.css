@@ -1,0 +1,446 @@
+/* ══════════════════════════════════════════
+   BACKDROP — Blurred dark overlay
+══════════════════════════════════════════ */
+.review-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1040;
+    background: rgba(10, 20, 40, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* ══════════════════════════════════════════
+   WRAPPER — Centers the modal on screen
+══════════════════════════════════════════ */
+.review-modal-wrapper {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    pointer-events: none; /* let backdrop clicks pass through */
+}
+
+/* ══════════════════════════════════════════
+   MODAL BOX — The card itself
+══════════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   MODAL BOX
+══════════════════════════════════════════ */
+.review-modal-box {
+    background: #ffffff;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 900px;
+    max-height: 92vh;
+
+    /* ✅ FIX 1: overlay scrollbar sits ON TOP of content, no gutter line */
+    overflow-y: overlay;          /* Chrome/Edge */
+    overflow-y: auto;             /* Fallback for Firefox */
+
+    box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: all;
+
+    /* ✅ FIX 2: tells browser NOT to reserve a gutter for the scrollbar */
+    scrollbar-gutter: auto;
+}
+
+/* ✅ FIX 3: make the scrollbar invisible when idle, only shows on hover/scroll */
+.review-modal-box::-webkit-scrollbar {
+    width: 5px;
+}
+
+.review-modal-box::-webkit-scrollbar-track {
+    background: transparent;   /* ← removes the visible track/line */
+}
+
+.review-modal-box::-webkit-scrollbar-thumb {
+    background: transparent;   /* hidden by default */
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+/* Only show thumb when user hovers over the modal */
+.review-modal-box:hover::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+}
+
+.review-modal-box:hover::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* ══════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════ */
+.review-modal-header {
+    background: linear-gradient(135deg, #1a3f72 0%, #2d6cc0 100%);
+    color: white;
+    padding: 20px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-radius: 24px 24px 0 0;
+    flex-shrink: 0;
+}
+
+.review-modal-header h5 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.review-modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.2s, transform 0.2s;
+    line-height: 1;
+}
+
+.review-modal-close:hover {
+    background: rgba(255, 255, 255, 0.38);
+    transform: rotate(90deg);
+}
+
+/* ══════════════════════════════════════════
+   BODY
+══════════════════════════════════════════ */
+.review-modal-body {
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    flex: 1;
+}
+
+/* ── Top row: Title (wide) | Status | Priority ── */
+.review-top-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 16px;
+    align-items: end;
+}
+
+/* ── Mid row: Description | Comments side by side ── */
+.review-mid-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+/* ══════════════════════════════════════════
+   FIELD WRAPPER
+══════════════════════════════════════════ */
+.review-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.review-field label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.review-field .req {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+.read-only-tag {
+    font-weight: 400;
+    color: #9ca3af;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 11px;
+}
+
+/* ── Shared input / textarea style ── */
+.review-field .form-control {
+    border-radius: 10px;
+    border: 1.5px solid #e5e7eb;
+    padding: 11px 14px;
+    font-size: 14px;
+    background: #f9fafb;
+    color: #111827;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.18s, box-shadow 0.18s;
+    font-family: inherit;
+}
+
+.review-field .form-control:focus {
+    border-color: #2d6cc0;
+    box-shadow: 0 0 0 3px rgba(45, 108, 192, 0.12);
+}
+
+.review-field textarea.form-control {
+    min-height: 150px;
+    resize: none;
+    line-height: 1.65;
+}
+
+/* Editable textarea (comments) */
+.review-field textarea.editable {
+    background: #ffffff;
+    border-color: #d1d5db;
+}
+
+.review-field textarea.editable:focus {
+    border-color: #1e4e8c;
+    box-shadow: 0 0 0 4px rgba(30, 78, 140, 0.1);
+}
+
+/* ══════════════════════════════════════════
+   DIVIDER
+══════════════════════════════════════════ */
+.review-divider {
+    border: none;
+    border-top: 1px solid #f1f5f9;
+    margin: 0;
+}
+
+/* ══════════════════════════════════════════
+   ATTACHMENTS
+══════════════════════════════════════════ */
+.review-no-attachments {
+    border: 1.5px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 22px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 13px;
+    background: #fafafa;
+}
+
+.review-attachments-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.review-photo-thumb {
+    width: 96px;
+    height: 96px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #e5e7eb;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.review-photo-thumb:hover {
+    transform: translateY(-3px) scale(1.04);
+    border-color: #2d6cc0;
+}
+
+.review-photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.review-video-thumb {
+    width: 150px;
+    height: 96px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.review-video-thumb video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ══════════════════════════════════════════
+   ASSIGN INFO
+══════════════════════════════════════════ */
+.review-assign-info {
+    font-size: 12px;
+    color: #6b7280;
+    padding-top: 4px;
+}
+
+/* ══════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════ */
+.review-modal-footer {
+    padding: 20px 28px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 14px;
+    background: #fff;
+    border-radius: 0 0 24px 24px;
+    flex-shrink: 0;
+}
+
+.review-status-badge {
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* ── Mark as Reviewed button ── */
+.btn-mark-reviewed {
+    background: linear-gradient(135deg, #1a3f72, #2d6cc0);
+    color: white;
+    border: none;
+    padding: 11px 26px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: opacity 0.18s, transform 0.15s;
+}
+
+.btn-mark-reviewed:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-mark-reviewed:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Request Changes button ── */
+.btn-request-changes {
+    background: #fff1f2;
+    color: #dc2626;
+    border: 1.5px solid #fecaca;
+    padding: 11px 26px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.18s, transform 0.15s;
+}
+
+.btn-request-changes:hover:not(:disabled) {
+    background: #fee2e2;
+    transform: translateY(-1px);
+}
+
+.btn-request-changes:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Spinner ── */
+.spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ══════════════════════════════════════════
+   LIGHTBOX
+══════════════════════════════════════════ */
+.review-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.review-lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.review-lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 28px;
+    color: white;
+    font-size: 26px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.review-lightbox-close:hover {
+    opacity: 1;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media (max-width: 700px) {
+    .review-top-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .review-top-row .review-field:first-child {
+        grid-column: 1 / -1; /* Title takes full width on mobile */
+    }
+
+    .review-mid-row {
+        grid-template-columns: 1fr; /* Stack on mobile */
+    }
+
+    .review-modal-body {
+        padding: 20px;
+    }
+
+    .review-modal-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn-mark-reviewed,
+    .btn-request-changes {
+        justify-content: center;
+        width: 100%;
+    }
+}
