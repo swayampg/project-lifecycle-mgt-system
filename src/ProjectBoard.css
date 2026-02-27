@@ -293,41 +293,44 @@
 /* Add Task Modal Specific */
 .add-task-modal-content {
     background: white;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 700px;
+    border-radius: 12px;
+    width: 95%;
+    max-width: 750px;
+    /* Limit height so it never goes off-screen */
+    max-height: 90vh; 
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     position: relative;
-    padding-bottom: 20px;
+    overflow: hidden; /* Keeps header/footer fixed */
 }
 
 .add-task-modal-header {
     background-color: #1a4d8c;
     color: white;
-    padding: 12px 20px;
-    font-size: 1rem;
-    font-weight: 500;
+    padding: 15px 24px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    flex-shrink: 0; /* Header won't shrink */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .add-task-modal-body {
-    padding: 20px;
+    padding: 24px;
     display: flex;
     gap: 30px;
+    /* This makes only the middle scrollable */
+    overflow-y: auto; 
+    flex-grow: 1;
 }
 
-.form-left-column {
-    flex: 1.2;
+.form-left-column, .form-right-column {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-}
-
-.form-right-column {
-    flex: 1.5;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    gap: 18px;
 }
 
 .form-row {
@@ -368,8 +371,12 @@
 .add-task-modal-footer {
     display: flex;
     justify-content: flex-end;
-    padding: 0 20px;
-    gap: 10px;
+    align-items: center;
+    padding: 16px 24px;
+    gap: 12px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0; /* Footer won't shrink or hide */
 }
 
 .delete-task-btn {
@@ -405,12 +412,12 @@
 
 .modal-close-icon {
     position: absolute;
-    top: 10px;
-    right: 15px;
+    top: 15px;
+    right: 20px;
     color: white;
     cursor: pointer;
-    opacity: 0.8;
-    transition: opacity 0.2s;
+    font-size: 1.2rem;
+    z-index: 10;
 }
 
 .modal-close-icon:hover {
@@ -467,4 +474,135 @@
     color: #666;
     line-height: 1.5;
     white-space: pre-wrap;
+}
+
+/* ============================================================
+   ADD THESE STYLES TO YOUR EXISTING ProjectBoard.css FILE
+   ============================================================ */
+
+/* ── Validate Task Button ── */
+.validate-task-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #1e4e8c, #2d6cc0);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 8px;
+}
+
+.validate-task-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #163d6e, #1e58a8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(30, 78, 140, 0.35);
+}
+
+.validate-task-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* ── Review Status Pill (inside edit modal) ── */
+.review-status-pill {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.review-status-pill.pending {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.review-status-pill.reviewed {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #28a745;
+}
+
+.review-status-pill.changes_requested {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #dc3545;
+}
+
+/* ── Task card badges on board ── */
+.task-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 4px;
+}
+
+.review-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.review-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.review-badge.reviewed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.review-badge.changes {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* ── Task item highlight states ── */
+.task-item.review-pending {
+    border-left: 3px solid #ffc107;
+}
+
+.task-item.review-done {
+    border-left: 3px solid #28a745;
+}
+
+.task-item.review-changes {
+    border-left: 3px solid #dc3545;
+}
+
+/* ── Spinner (reuse existing pattern) ── */
+.spinner-border-custom {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-height: 700px) {
+    .add-task-modal-body {
+        gap: 15px;
+        padding: 15px;
+    }
+    .form-field input, .form-field select {
+        padding: 8px 12px;
+    }
 }

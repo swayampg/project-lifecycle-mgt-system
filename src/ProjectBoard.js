@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ProjectBoard.css';
-import { Plus, Minus, X, Edit2, Check, Layout } from 'lucide-react';
+import { Plus, Minus, X, Edit2, Check, Layout, Send } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { auth, db } from './firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
@@ -16,6 +16,7 @@ import {
     updateProjectTask,
     deleteProjectTask
 } from './services/db_services';
+import { sendTaskForReview } from './services/db_services';
 import BottomNav from './BottomNav';
 import Header from './Header';
 
@@ -25,21 +26,19 @@ const ProjectBoard = () => {
     const [teamMembers, setTeamMembers] = useState([]);
     const [phases, setPhases] = useState([]);
     const [loading, setLoading] = useState(!!projectId);
-    const [isUpdating, setIsUpdating] = useState(false); // New state for spinner
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isSendingToMentor, setIsSendingToMentor] = useState(false);
     const [currentUserName, setCurrentUserName] = useState('');
     const [userRole, setUserRole] = useState(null);
 
-    // 2. STATE FOR MODALS AND EDITING
     const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
     const [isViewTaskModalOpen, setIsViewTaskModalOpen] = useState(false);
     const [currentPhaseId, setCurrentPhaseId] = useState(null);
     const [currentTask, setCurrentTask] = useState(null);
 
-    // Rename state
     const [editingPhaseId, setEditingPhaseId] = useState(null);
     const [editPhaseTitle, setEditPhaseTitle] = useState('');
 
-    // Form state for adding task
     const [newTaskName, setNewTaskName] = useState('');
     const [newTaskDescription, setNewTaskDescription] = useState('');
     const [newAssignBy, setNewAssignBy] = useState('');
@@ -111,6 +110,8 @@ const ProjectBoard = () => {
     };
 
     const isLeader = userRole === 'Leader' || userRole === 'Project Leader';
+    // Members (non-leaders, non-mentors) can send tasks for validation
+    const isMember = !isLeader && userRole !== 'Mentor' && userRole !== null;
 
     const handleAddPhase = async () => {
         try {
@@ -204,7 +205,7 @@ const ProjectBoard = () => {
         e.preventDefault();
         if (!newTaskName.trim()) return;
 
-        setIsUpdating(true); // Start Loading
+        setIsUpdating(true);
         const taskData = {
             name: newTaskName,
             description: newTaskDescription,
@@ -215,26 +216,25 @@ const ProjectBoard = () => {
             priority: newPriority,
             media: newMedia,
             phaseId: currentPhaseId,
-            completed: false
+            completed: false,
+            reviewStatus: null  // null | 'pending' | 'reviewed' | 'changes_requested'
         };
 
         try {
             const taskId = await addProjectTask(taskData);
             const newTask = { id: taskId, ...taskData };
-
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {
                     return { ...p, tasks: [...p.tasks, newTask] };
                 }
                 return p;
             }));
-
             setIsAddTaskModalOpen(false);
         } catch (error) {
             console.error("Error adding task:", error);
             alert("Failed to add task.");
         } finally {
-            setIsUpdating(false); // End Loading
+            setIsUpdating(false);
         }
     };
 
@@ -276,7 +276,7 @@ const ProjectBoard = () => {
 
     const handleSaveTask = async (e) => {
         e.preventDefault();
-        setIsUpdating(true); // Start Loading
+        setIsUpdating(true);
         const updates = {
             name: newTaskName,
             description: newTaskDescription,
@@ -304,7 +304,66 @@ const ProjectBoard = () => {
             console.error("Error updating task:", error);
             alert("Failed to update task.");
         } finally {
-            setIsUpdating(false); // End Loading
+            setIsUpdating(false);
+        }
+    };
+
+    // ✅ NEW: Send task to mentor for validation
+    const handleValidateTask = async (e) => {
+        e.preventDefault();
+        if (!currentTask) return;
+
+        setIsSendingToMentor(true);
+
+        // Build the updated task with latest form values
+        const updatedTask = {
+            ...currentTask,
+            name: newTaskName,
+            description: newTaskDescription,
+            assignBy: newAssignBy,
+            assignTo: newAssignTo,
+            deadline: newDeadline,
+            status: newStatus,
+            priority: newPriority,
+            media: newMedia
+        };
+
+        try {
+            // Save changes first
+            await updateProjectTask(currentTask.id, {
+                name: newTaskName,
+                description: newTaskDescription,
+                status: newStatus,
+                priority: newPriority,
+                media: newMedia,
+                reviewStatus: 'pending'
+            });
+
+            // Send to reviews collection
+            await sendTaskForReview(updatedTask, projectId);
+
+            // Update local state
+            setPhases(prev => prev.map(p => {
+                if (p.id === currentPhaseId) {
+                    return {
+                        ...p,
+                        tasks: p.tasks.map(t =>
+                            t.id === currentTask.id
+                                ? { ...t, ...updatedTask, reviewStatus: 'pending' }
+                                : t
+                        )
+                    };
+                }
+                return p;
+            }));
+
+            setIsViewTaskModalOpen(false);
+            alert("Task sent to mentor for validation!");
+        } catch (error) {
+            console.error("Error sending task for review:", error);
+            alert("Failed to send task for review.");
+        } finally {
+            setIsSendingToMentor(false);
         }
     };
 
@@ -328,6 +387,10 @@ const ProjectBoard = () => {
             }
         }
     };
+
+    // Check if the current user is assigned to this task (members can validate their own tasks)
+    const isTaskAssignedToMe = currentTask?.assignTo === currentUserName;
+    const canValidate = (isMember && isTaskAssignedToMe) || isLeader;
 
     return (
         <div className="project-board-container">
@@ -378,11 +441,7 @@ const ProjectBoard = () => {
                                                         }}
                                                         autoFocus
                                                     />
-                                                    <Check
-                                                        size={14}
-                                                        className="cursor-pointer"
-                                                        onClick={() => saveRename(phase.id)}
-                                                    />
+                                                    <Check size={14} className="cursor-pointer" onClick={() => saveRename(phase.id)} />
                                                 </div>
                                             ) : (
                                                 <>
@@ -390,16 +449,8 @@ const ProjectBoard = () => {
                                                     <div className="header-actions">
                                                         {isLeader && (
                                                             <>
-                                                                <Edit2
-                                                                    size={14}
-                                                                    className="cursor-pointer"
-                                                                    onClick={() => startEditing(phase.id, phase.title)}
-                                                                />
-                                                                <Minus
-                                                                    size={14}
-                                                                    className="cursor-pointer"
-                                                                    onClick={() => handleRemovePhase(phase.id)}
-                                                                />
+                                                                <Edit2 size={14} className="cursor-pointer" onClick={() => startEditing(phase.id, phase.title)} />
+                                                                <Minus size={14} className="cursor-pointer" onClick={() => handleRemovePhase(phase.id)} />
                                                             </>
                                                         )}
                                                     </div>
@@ -408,26 +459,36 @@ const ProjectBoard = () => {
                                         </div>
                                         <div className="column-body">
                                             {isLeader && (
-                                                <button
-                                                    className="add-task-btn"
-                                                    onClick={() => openAddTaskModal(phase.id)}
-                                                >
+                                                <button className="add-task-btn" onClick={() => openAddTaskModal(phase.id)}>
                                                     <Plus size={14} /> Add task
                                                 </button>
                                             )}
-                                            {phase.tasks.map((task) => (
-                                                <div
-                                                    key={task.id}
-                                                    className={`task-item ${task.completed ? 'completed' : ''}`}
-                                                    onClick={() => viewTaskDetails(task, phase.id)}
-                                                >
-                                                    <span>{task.name}</span>
-                                                    <div
-                                                        className="status-circle"
-                                                        onClick={(e) => toggleTaskCompletion(e, phase.id, task.id)}
-                                                    ></div>
-                                                </div>
-                                            ))}
+                                            {(() => {
+                                                const priorityWeight = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                                                return [...phase.tasks]
+                                                    .sort((a, b) => (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0))
+                                                    .map((task) => (
+                                                        <div
+                                                            key={task.id}
+                                                            className={`task-item ${task.completed ? 'completed' : ''} ${task.reviewStatus === 'pending' ? 'review-pending' : ''} ${task.reviewStatus === 'reviewed' ? 'review-done' : ''} ${task.reviewStatus === 'changes_requested' ? 'review-changes' : ''}`}
+                                                            onClick={() => viewTaskDetails(task, phase.id)}
+                                                        >
+                                                            <span>{task.name}</span>
+                                                            <div className="task-badges">
+                                                                {task.reviewStatus === 'pending' && (
+                                                                    <span className="review-badge pending">⏳ Pending Review</span>
+                                                                )}
+                                                                {task.reviewStatus === 'reviewed' && (
+                                                                    <span className="review-badge reviewed">✅ Reviewed</span>
+                                                                )}
+                                                                {task.reviewStatus === 'changes_requested' && (
+                                                                    <span className="review-badge changes">🔄 Changes Needed</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="status-circle" onClick={(e) => toggleTaskCompletion(e, phase.id, task.id)}></div>
+                                                        </div>
+                                                    ));
+                                            })()}
                                         </div>
                                     </div>
                                 ))}
@@ -437,12 +498,8 @@ const ProjectBoard = () => {
                         <div className="add-phase-container">
                             {isLeader && (
                                 <>
-                                    <button className="btn-reset-board" onClick={handleResetBoard}>
-                                        Reset Board
-                                    </button>
-                                    <button className="btn-add-phase" onClick={handleAddPhase}>
-                                        <Plus size={18} /> Add Phase
-                                    </button>
+                                    <button className="btn-reset-board" onClick={handleResetBoard}>Reset Board</button>
+                                    <button className="btn-add-phase" onClick={handleAddPhase}><Plus size={18} /> Add Phase</button>
                                 </>
                             )}
                         </div>
@@ -452,33 +509,21 @@ const ProjectBoard = () => {
 
             <BottomNav />
 
-            {/* Add Task Modal */}
+            {/* ── Add Task Modal ── */}
             {isAddTaskModalOpen && (
                 <div className="modal-overlay">
                     <div className="add-task-modal-content">
-                        <div className="add-task-modal-header">
-                            <span>Add new task</span>
-                        </div>
+                        <div className="add-task-modal-header"><span>Add new task</span></div>
                         <form onSubmit={handleAddTask} className="add-task-form">
                             <div className="add-task-modal-body">
                                 <div className="form-left-column">
                                     <div className="form-field">
                                         <label>Title</label>
-                                        <input
-                                            type="text"
-                                            value={newTaskName}
-                                            onChange={(e) => setNewTaskName(e.target.value)}
-                                            required
-                                            autoFocus
-                                        />
+                                        <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus />
                                     </div>
                                     <div className="form-field">
                                         <label>Description</label>
-                                        <textarea
-                                            value={newTaskDescription}
-                                            onChange={(e) => setNewTaskDescription(e.target.value)}
-                                            rows="6"
-                                        ></textarea>
+                                        <textarea value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} rows="6"></textarea>
                                     </div>
                                 </div>
 
@@ -486,20 +531,11 @@ const ProjectBoard = () => {
                                     <div className="form-row">
                                         <div className="form-field">
                                             <label>Assign by</label>
-                                            <input
-                                                type="text"
-                                                value={newAssignBy}
-                                                readOnly
-                                                className="bg-light"
-                                            />
+                                            <input type="text" value={newAssignBy} readOnly className="bg-light" />
                                         </div>
                                         <div className="form-field">
                                             <label>Assign to</label>
-                                            <select
-                                                value={newAssignTo}
-                                                onChange={(e) => setNewAssignTo(e.target.value)}
-                                                required
-                                            >
+                                            <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required>
                                                 <option value="">Select Member</option>
                                                 {teamMembers.map(member => (
                                                     <option key={member.uid} value={member.fullName}>
@@ -514,19 +550,12 @@ const ProjectBoard = () => {
                                         <div className="form-field">
                                             <label>Deadline</label>
                                             <div className="date-input-wrapper">
-                                                <input
-                                                    type="date"
-                                                    value={newDeadline}
-                                                    onChange={(e) => setNewDeadline(e.target.value)}
-                                                />
+                                                <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
                                             </div>
                                         </div>
                                         <div className="form-field">
                                             <label>Status</label>
-                                            <select
-                                                value={newStatus}
-                                                onChange={(e) => setNewStatus(e.target.value)}
-                                            >
+                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
                                                 <option value=""></option>
                                                 <option value="To Do">To Do</option>
                                                 <option value="In Progress">In Progress</option>
@@ -537,11 +566,7 @@ const ProjectBoard = () => {
 
                                     <div className="form-field priority-field">
                                         <label>Priority <span className="required-star">*</span></label>
-                                        <select
-                                            value={newPriority}
-                                            onChange={(e) => setNewPriority(e.target.value)}
-                                            required
-                                        >
+                                        <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required>
                                             <option value=""></option>
                                             <option value="Low">Low</option>
                                             <option value="Medium">Medium</option>
@@ -552,51 +577,44 @@ const ProjectBoard = () => {
                             </div>
                             <div className="add-task-modal-footer">
                                 <button type="submit" className="create-task-btn" disabled={isUpdating}>
-                                    {isUpdating ? (
-                                        <><span className="spinner-border-custom"></span> Creating...</>
-                                    ) : (
-                                        "Create task"
-                                    )}
+                                    {isUpdating ? <><span className="spinner-border-custom"></span> Creating...</> : "Create task"}
                                 </button>
                             </div>
                         </form>
-                        <div
-                            className="modal-close-icon"
-                            onClick={() => setIsAddTaskModalOpen(false)}
-                        >
-                            <X size={20} />
-                        </div>
+                        <div className="modal-close-icon" onClick={() => setIsAddTaskModalOpen(false)}><X size={20} /></div>
                     </div>
                 </div>
             )}
 
-            {/* View/Edit Task Modal */}
+            {/* ── View / Edit Task Modal ── */}
             {isViewTaskModalOpen && currentTask && (
                 <div className="modal-overlay">
                     <div className="add-task-modal-content">
-                        <div className="add-task-modal-header">
-                            <span>Edit task</span>
-                        </div>
+                        <div className="add-task-modal-header"><span>Edit task</span></div>
                         <form onSubmit={handleSaveTask} className="add-task-form">
                             <div className="add-task-modal-body">
                                 <div className="form-left-column">
                                     <div className="form-field">
                                         <label>Title <span className="required-star">*</span></label>
-                                        <input
-                                            type="text"
-                                            value={newTaskName}
-                                            onChange={(e) => setNewTaskName(e.target.value)}
-                                            required
-                                        />
+                                        <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required />
                                     </div>
                                     <div className="form-field">
                                         <label>Description</label>
-                                        <textarea
-                                            value={newTaskDescription}
-                                            onChange={(e) => setNewTaskDescription(e.target.value)}
-                                            rows="6"
-                                        ></textarea>
+                                        <textarea value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} rows="6"></textarea>
                                     </div>
+
+                                    {/* ── Mentor comment (read-only, shown if changes requested) ── */}
+                                    {currentTask.reviewStatus === 'changes_requested' && currentTask.mentorComment && (
+                                        <div className="form-field mt-2">
+                                            <label style={{ color: '#dc3545' }}>🔄 Mentor Feedback</label>
+                                            <textarea
+                                                value={currentTask.mentorComment}
+                                                readOnly
+                                                rows="3"
+                                                style={{ backgroundColor: '#fff3f3', border: '1px solid #dc3545', borderRadius: '8px', padding: '8px', resize: 'none', width: '100%' }}
+                                            />
+                                        </div>
+                                    )}
 
                                     <div className="media-upload-section mt-3">
                                         <label className="fw-bold d-block mb-2">Attachments</label>
@@ -614,17 +632,13 @@ const ProjectBoard = () => {
                                             {newMedia.photos.map((src, i) => (
                                                 <div key={i} className="media-thumb">
                                                     <img src={src} alt="thumb" />
-                                                    <div className="remove-media-overlay" onClick={() => removeMedia(i, 'photos')}>
-                                                        <X size={12} />
-                                                    </div>
+                                                    <div className="remove-media-overlay" onClick={() => removeMedia(i, 'photos')}><X size={12} /></div>
                                                 </div>
                                             ))}
                                             {newMedia.videos.map((src, i) => (
                                                 <div key={i} className="media-thumb">
                                                     <video src={src} />
-                                                    <div className="remove-media-overlay" onClick={() => removeMedia(i, 'videos')}>
-                                                        <X size={12} />
-                                                    </div>
+                                                    <div className="remove-media-overlay" onClick={() => removeMedia(i, 'videos')}><X size={12} /></div>
                                                 </div>
                                             ))}
                                         </div>
@@ -635,11 +649,7 @@ const ProjectBoard = () => {
                                     <div className="form-row">
                                         <div className="form-field">
                                             <label>Status <span className="required-star">*</span></label>
-                                            <select
-                                                value={newStatus}
-                                                onChange={(e) => setNewStatus(e.target.value)}
-                                                required
-                                            >
+                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
                                                 <option value=""></option>
                                                 <option value="To Do">To Do</option>
                                                 <option value="In Progress">In Progress</option>
@@ -648,11 +658,7 @@ const ProjectBoard = () => {
                                         </div>
                                         <div className="form-field">
                                             <label>Priority <span className="required-star">*</span></label>
-                                            <select
-                                                value={newPriority}
-                                                onChange={(e) => setNewPriority(e.target.value)}
-                                                required
-                                            >
+                                            <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required>
                                                 <option value=""></option>
                                                 <option value="Low">Low</option>
                                                 <option value="Medium">Medium</option>
@@ -660,28 +666,50 @@ const ProjectBoard = () => {
                                             </select>
                                         </div>
                                     </div>
-                                    {/* Content continues below based on your existing pattern */}
+
+                                    {/* Review status badge */}
+                                    {currentTask.reviewStatus && (
+                                        <div className="form-field mt-2">
+                                            <label>Review Status</label>
+                                            <div className={`review-status-pill ${currentTask.reviewStatus}`}>
+                                                {currentTask.reviewStatus === 'pending' && '⏳ Awaiting Mentor Review'}
+                                                {currentTask.reviewStatus === 'reviewed' && '✅ Reviewed by Mentor'}
+                                                {currentTask.reviewStatus === 'changes_requested' && '🔄 Changes Requested'}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+
                             <div className="add-task-modal-footer">
+                                {/* ✅ NEW: Validate Task button */}
+                                {canValidate && currentTask.reviewStatus !== 'pending' && currentTask.reviewStatus !== 'reviewed' && (
+                                    <button
+                                        type="button"
+                                        className="validate-task-btn"
+                                        onClick={handleValidateTask}
+                                        disabled={isSendingToMentor}
+                                        title="Send this task to the mentor for review"
+                                    >
+                                        {isSendingToMentor
+                                            ? <><span className="spinner-border-custom"></span> Sending...</>
+                                            : <><Send size={14} /> Validate Task</>
+                                        }
+                                    </button>
+                                )}
+
                                 <button type="submit" className="create-task-btn" disabled={isUpdating}>
-                                    {isUpdating ? (
-                                        <><span className="spinner-border-custom"></span> Saving...</>
-                                    ) : (
-                                        "Save Changes"
-                                    )}
+                                    {isUpdating ? <><span className="spinner-border-custom"></span> Saving...</> : "Save Changes"}
                                 </button>
-                                <button type="button" className="btn btn-danger ms-2" onClick={handleDeleteTask} style={{borderRadius: '12px'}}>
-                                    Delete Task
-                                </button>
+
+                                {isLeader && (
+                                    <button type="button" className="btn btn-danger ms-2" onClick={handleDeleteTask} style={{ borderRadius: '12px' }}>
+                                        Delete Task
+                                    </button>
+                                )}
                             </div>
                         </form>
-                        <div
-                            className="modal-close-icon"
-                            onClick={() => setIsViewTaskModalOpen(false)}
-                        >
-                            <X size={20} />
-                        </div>
+                        <div className="modal-close-icon" onClick={() => setIsViewTaskModalOpen(false)}><X size={20} /></div>
                     </div>
                 </div>
             )}

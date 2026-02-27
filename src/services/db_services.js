@@ -1,5 +1,5 @@
 import { db } from '../firebaseConfig';
-import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 
 /**
  * Finds a user by their email address.
@@ -119,7 +119,6 @@ export const getUserProjects = async (userUid) => {
         });
 
         const projIds = Object.keys(memberships);
-        // Firestore 'in' query limited to 30 items
         const projectsSnapshot = await getDocs(query(collection(db, "projects"), where("proj_id", "in", projIds)));
 
         return projectsSnapshot.docs.map(doc => {
@@ -140,17 +139,11 @@ export const getUserProjects = async (userUid) => {
 
 /**
  * Creates a new project and an associated entry in the projectTeam collection.
- * 
- * @param {Object} formData - The project form data.
- * @param {string} userUid - The UID of the current user.
- * @param {string} creatorRole - The role selected by the creator.
- * @returns {Promise<string>} - The proj_id of the new project.
  */
 export const createProjectWithTeam = async (formData, userUid, creatorRole = "Project Leader") => {
     try {
         const proj_id = Date.now().toString();
 
-        // 1. Add to projects collection
         await addDoc(collection(db, "projects"), {
             proj_id: proj_id,
             Name: formData.projectTitle,
@@ -163,7 +156,6 @@ export const createProjectWithTeam = async (formData, userUid, creatorRole = "Pr
             createdAt: new Date()
         });
 
-        // 2. Add to projectTeam collection
         const team_id = `team_${Date.now()}`;
         await addDoc(collection(db, "projectTeam"), {
             id: team_id,
@@ -172,7 +164,6 @@ export const createProjectWithTeam = async (formData, userUid, creatorRole = "Pr
             role: creatorRole
         });
 
-        // 3. Add default phases to project-phases collection
         const defaultPhases = [
             'Requirement Analysis',
             'Design',
@@ -186,8 +177,8 @@ export const createProjectWithTeam = async (formData, userUid, creatorRole = "Pr
                 phaseId: `phase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 phaseName: phaseName,
                 proj_id: proj_id,
-                projectName: formData.projectTitle, // Store project name
-                tasks: [] // Initialize with empty tasks
+                projectName: formData.projectTitle,
+                tasks: []
             });
         }
 
@@ -198,10 +189,9 @@ export const createProjectWithTeam = async (formData, userUid, creatorRole = "Pr
         throw error;
     }
 };
+
 /**
  * Fetches all team members for a specific project, including their names and roles.
- * @param {string} projId 
- * @returns {Promise<Array>}
  */
 export const getProjectTeamMembers = async (projId) => {
     try {
@@ -230,8 +220,6 @@ export const getProjectTeamMembers = async (projId) => {
 
 /**
  * Adds a new task to the Tasks collection.
- * @param {Object} taskData 
- * @returns {Promise<string>} The ID of the created task document
  */
 export const addProjectTask = async (taskData) => {
     try {
@@ -248,8 +236,6 @@ export const addProjectTask = async (taskData) => {
 
 /**
  * Fetches all tasks for a specific phase.
- * @param {string} phaseId 
- * @returns {Promise<Array>}
  */
 export const getTasksByPhase = async (phaseId) => {
     try {
@@ -264,9 +250,6 @@ export const getTasksByPhase = async (phaseId) => {
 
 /**
  * Updates a task in the Tasks collection.
- * @param {string} taskId 
- * @param {Object} updates 
- * @returns {Promise<void>}
  */
 export const updateProjectTask = async (taskId, updates) => {
     try {
@@ -280,8 +263,6 @@ export const updateProjectTask = async (taskId, updates) => {
 
 /**
  * Deletes a task from the Tasks collection.
- * @param {string} taskId 
- * @returns {Promise<void>}
  */
 export const deleteProjectTask = async (taskId) => {
     try {
@@ -294,8 +275,6 @@ export const deleteProjectTask = async (taskId) => {
 
 /**
  * Fetches all phases for a specific project.
- * @param {string} projId 
- * @returns {Promise<Array>}
  */
 export const getProjectPhases = async (projId) => {
     try {
@@ -307,12 +286,9 @@ export const getProjectPhases = async (projId) => {
         return [];
     }
 };
+
 /**
  * Adds a new phase to a project.
- * @param {string} projId 
- * @param {string} phaseName 
- * @param {string} projectName 
- * @returns {Promise<Object>} The added phase data with its document ID
  */
 export const addProjectPhase = async (projId, phaseName, projectName = "") => {
     try {
@@ -333,9 +309,6 @@ export const addProjectPhase = async (projId, phaseName, projectName = "") => {
 
 /**
  * Updates the project name in all phases of a project.
- * @param {string} projId 
- * @param {string} newProjectName 
- * @returns {Promise<void>}
  */
 export const updateProjectNameInPhases = async (projId, newProjectName) => {
     try {
@@ -351,9 +324,6 @@ export const updateProjectNameInPhases = async (projId, newProjectName) => {
 
 /**
  * Updates a project phase.
- * @param {string} docId - The Firestore document ID
- * @param {Object} updates 
- * @returns {Promise<void>}
  */
 export const updateProjectPhase = async (docId, updates) => {
     try {
@@ -367,8 +337,6 @@ export const updateProjectPhase = async (docId, updates) => {
 
 /**
  * Deletes a project phase.
- * @param {string} docId - The Firestore document ID
- * @returns {Promise<void>}
  */
 export const deleteProjectPhase = async (docId) => {
     try {
@@ -380,20 +348,15 @@ export const deleteProjectPhase = async (docId) => {
 };
 
 /**
- * Fetches all tasks across all phases of a project that are assigned to a specific user.
- * @param {string} projId 
- * @param {string} userName 
- * @returns {Promise<Array>}
+ * Fetches all tasks across all phases of a project assigned to a specific user.
  */
 export const getTasksByProjectAndUser = async (projId, userName) => {
     try {
-        // 1. Get all phases for this project to get their IDs
         const phases = await getProjectPhases(projId);
         const phaseIds = phases.map(p => p.id);
 
         if (phaseIds.length === 0) return [];
 
-        // 2. Query Tasks collection for tasks in these phases assigned to the user
         const q = query(
             collection(db, "Tasks"),
             where("phaseId", "in", phaseIds),
@@ -410,9 +373,6 @@ export const getTasksByProjectAndUser = async (projId, userName) => {
 
 /**
  * Fetches the role of a user in a specific project.
- * @param {string} projId 
- * @param {string} userUid 
- * @returns {Promise<string|null>}
  */
 export const getUserRoleInProject = async (projId, userUid) => {
     try {
@@ -466,29 +426,24 @@ export const getLatestNews = async (projId) => {
     }
     return null;
 };
+
 /**
- * Deletes a project and all its associated data (team, phases, tasks, news, invitations).
- * @param {string} projId 
- * @returns {Promise<void>}
+ * Deletes a project and all its associated data.
  */
 export const deleteProject = async (projId) => {
     try {
-        // 1. Delete project document
         const projQuery = query(collection(db, "projects"), where("proj_id", "==", projId));
         const projSnap = await getDocs(projQuery);
         const projectDeletePromises = projSnap.docs.map(d => deleteDoc(d.ref));
 
-        // 2. Delete team members
         const teamQuery = query(collection(db, "projectTeam"), where("prjid", "==", projId));
         const teamSnap = await getDocs(teamQuery);
         const teamDeletePromises = teamSnap.docs.map(d => deleteDoc(d.ref));
 
-        // 3. Delete phases
         const phaseQuery = query(collection(db, "project-phases"), where("proj_id", "==", projId));
         const phaseSnap = await getDocs(phaseQuery);
         const phaseDeletePromises = phaseSnap.docs.map(d => deleteDoc(d.ref));
 
-        // 4. Delete tasks (find tasks using phase IDs)
         const phaseIds = phaseSnap.docs.map(d => d.id);
         let taskDeletePromises = [];
         if (phaseIds.length > 0) {
@@ -497,12 +452,10 @@ export const deleteProject = async (projId) => {
             taskDeletePromises = taskSnap.docs.map(d => deleteDoc(d.ref));
         }
 
-        // 5. Delete news
         const newsQuery = query(collection(db, "news"), where("prjid", "==", projId));
         const newsSnap = await getDocs(newsQuery);
         const newsDeletePromises = newsSnap.docs.map(d => deleteDoc(d.ref));
 
-        // 6. Delete invitations
         const inviteQuery = query(collection(db, "invitations"), where("prjid", "==", projId));
         const inviteSnap = await getDocs(inviteQuery);
         const inviteDeletePromises = inviteSnap.docs.map(d => deleteDoc(d.ref));
@@ -561,14 +514,12 @@ export const requestProjectDeletion = async (projId) => {
  */
 export const cancelProjectDeletion = async (projId) => {
     try {
-        // 1. Reset project status
         const q = query(collection(db, "projects"), where("proj_id", "==", projId));
         const snap = await getDocs(q);
         if (!snap.empty) {
             await updateDoc(snap.docs[0].ref, { deletionStatus: null });
         }
 
-        // 2. Clear member consents
         const teamQ = query(collection(db, "projectTeam"), where("prjid", "==", projId));
         const teamSnap = await getDocs(teamQ);
         const resetPromises = teamSnap.docs.map(d => updateDoc(d.ref, { consentToDelete: false }));
@@ -599,3 +550,92 @@ export const updateMemberConsent = async (projId, uid, consent) => {
     }
 };
 
+
+// ============================================================
+// NEW FUNCTIONS — MENTOR REVIEW & NOTIFICATIONS
+// ============================================================
+
+/**
+ * Sends a task to the mentor for review.
+ * Creates a document in the "reviews" collection.
+ */
+export const sendTaskForReview = async (task, projectId) => {
+    try {
+        const reviewData = {
+            taskId: task.id,
+            taskName: task.name,
+            description: task.description || '',
+            status: task.status || '',
+            priority: task.priority || '',
+            assignTo: task.assignTo || '',
+            assignBy: task.assignBy || '',
+            media: task.media || { photos: [], videos: [] },
+            projectId: projectId,
+            reviewStatus: 'pending',
+            mentorComment: '',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        };
+        const docRef = await addDoc(collection(db, 'reviews'), reviewData);
+        return docRef.id;
+    } catch (error) {
+        console.error("Error sending task for review:", error);
+        throw error;
+    }
+};
+
+/**
+ * Fetches all reviews for a specific project.
+ */
+export const getReviewsByProject = async (projectId) => {
+    try {
+        const q = query(collection(db, 'reviews'), where('projectId', '==', projectId));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+        console.error("Error fetching reviews:", error);
+        return [];
+    }
+};
+
+/**
+ * Updates review status after mentor action.
+ * @param {string} reviewId
+ * @param {string} reviewStatus - 'reviewed' | 'changes_requested'
+ * @param {string} mentorComment
+ */
+export const updateReviewStatus = async (reviewId, reviewStatus, mentorComment = '') => {
+    try {
+        const reviewRef = doc(db, 'reviews', reviewId);
+        await updateDoc(reviewRef, {
+            reviewStatus,
+            mentorComment,
+            updatedAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error updating review status:", error);
+        throw error;
+    }
+};
+
+/**
+ * Sends a notification to a user.
+ */
+export const sendNotification = async ({ recipientUid, senderName, senderPhoto, message, type, projectId, taskId }) => {
+    try {
+        await addDoc(collection(db, 'notifications'), {
+            recipientUid,
+            senderName: senderName || 'Mentor',
+            senderPhoto: senderPhoto || '',
+            message,
+            type,
+            projectId,
+            taskId,
+            isRead: false,
+            createdAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error sending notification:", error);
+        throw error;
+    }
+};
