@@ -110,7 +110,6 @@ const ProjectBoard = () => {
     };
 
     const isLeader = userRole === 'Leader' || userRole === 'Project Leader';
-    // Members (non-leaders, non-mentors) can send tasks for validation
     const isMember = !isLeader && userRole !== 'Mentor' && userRole !== null;
 
     const handleAddPhase = async () => {
@@ -217,7 +216,7 @@ const ProjectBoard = () => {
             media: newMedia,
             phaseId: currentPhaseId,
             completed: false,
-            reviewStatus: null  // null | 'pending' | 'reviewed' | 'changes_requested'
+            reviewStatus: null
         };
 
         try {
@@ -308,14 +307,12 @@ const ProjectBoard = () => {
         }
     };
 
-    // ✅ NEW: Send task to mentor for validation
     const handleValidateTask = async (e) => {
         e.preventDefault();
         if (!currentTask) return;
 
         setIsSendingToMentor(true);
 
-        // Build the updated task with latest form values
         const updatedTask = {
             ...currentTask,
             name: newTaskName,
@@ -329,7 +326,6 @@ const ProjectBoard = () => {
         };
 
         try {
-            // Save changes first
             await updateProjectTask(currentTask.id, {
                 name: newTaskName,
                 description: newTaskDescription,
@@ -339,10 +335,8 @@ const ProjectBoard = () => {
                 reviewStatus: 'pending'
             });
 
-            // Send to reviews collection
             await sendTaskForReview(updatedTask, projectId);
 
-            // Update local state
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {
                     return {
@@ -388,7 +382,6 @@ const ProjectBoard = () => {
         }
     };
 
-    // Check if the current user is assigned to this task (members can validate their own tasks)
     const isTaskAssignedToMe = currentTask?.assignTo === currentUserName;
     const canValidate = (isMember && isTaskAssignedToMe) || isLeader;
 
@@ -475,15 +468,9 @@ const ProjectBoard = () => {
                                                         >
                                                             <span>{task.name}</span>
                                                             <div className="task-badges">
-                                                                {task.reviewStatus === 'pending' && (
-                                                                    <span className="review-badge pending">⏳ Pending Review</span>
-                                                                )}
-                                                                {task.reviewStatus === 'reviewed' && (
-                                                                    <span className="review-badge reviewed">✅ Reviewed</span>
-                                                                )}
-                                                                {task.reviewStatus === 'changes_requested' && (
-                                                                    <span className="review-badge changes">🔄 Changes Needed</span>
-                                                                )}
+                                                                {task.reviewStatus === 'pending' && <span className="review-badge pending">⏳ Pending Review</span>}
+                                                                {task.reviewStatus === 'reviewed' && <span className="review-badge reviewed">✅ Reviewed</span>}
+                                                                {task.reviewStatus === 'changes_requested' && <span className="review-badge changes">🔄 Changes Needed</span>}
                                                             </div>
                                                             <div className="status-circle" onClick={(e) => toggleTaskCompletion(e, phase.id, task.id)}></div>
                                                         </div>
@@ -515,56 +502,43 @@ const ProjectBoard = () => {
                     <div className="add-task-modal-content">
                         <div className="add-task-modal-header"><span>Add new task</span></div>
                         <form onSubmit={handleAddTask} className="add-task-form">
-                            <div className="add-task-modal-body">
-                                <div className="form-left-column">
-                                    <div className="form-field">
-                                        <label>Title</label>
+                            <div className="add-task-modal-body" style={{ flexDirection: 'column' }}>
+
+                                {/* Row 1: Title, Status, Priority */}
+                                <div className="form-row">
+                                    <div className="form-field" style={{ flex: 2 }}>
+                                        <label>Title <span className="required-star">*</span></label>
                                         <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus />
                                     </div>
                                     <div className="form-field">
-                                        <label>Description</label>
-                                        <textarea value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} rows="6"></textarea>
+                                        <label>Assign by</label>
+                                        <input type="text" value={newAssignBy} readOnly className="bg-light" />
                                     </div>
-                                </div>
-
-                                <div className="form-right-column">
-                                    <div className="form-row">
-                                        <div className="form-field">
-                                            <label>Assign by</label>
-                                            <input type="text" value={newAssignBy} readOnly className="bg-light" />
-                                        </div>
-                                        <div className="form-field">
-                                            <label>Assign to</label>
-                                            <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required>
-                                                <option value="">Select Member</option>
-                                                {teamMembers.map(member => (
-                                                    <option key={member.uid} value={member.fullName}>
-                                                        {member.fullName} ({member.role})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                    <div className="form-field">
+                                        <label>Assign to</label>
+                                        <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required>
+                                            <option value="">Select Member</option>
+                                            {teamMembers.map(member => (
+                                                <option key={member.uid} value={member.fullName}>
+                                                    {member.fullName} ({member.role})
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
-
-                                    <div className="form-row">
-                                        <div className="form-field">
-                                            <label>Deadline</label>
-                                            <div className="date-input-wrapper">
-                                                <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
-                                            </div>
-                                        </div>
-                                        <div className="form-field">
-                                            <label>Status</label>
-                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
-                                                <option value=""></option>
-                                                <option value="To Do">To Do</option>
-                                                <option value="In Progress">In Progress</option>
-                                                <option value="Done">Done</option>
-                                            </select>
-                                        </div>
+                                    <div className="form-field">
+                                        <label>Deadline</label>
+                                        <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
                                     </div>
-
-                                    <div className="form-field priority-field">
+                                    <div className="form-field">
+                                        <label>Status</label>
+                                        <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
+                                            <option value=""></option>
+                                            <option value="To Do">To Do</option>
+                                            <option value="In Progress">In Progress</option>
+                                            <option value="Done">Done</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-field">
                                         <label>Priority <span className="required-star">*</span></label>
                                         <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required>
                                             <option value=""></option>
@@ -574,6 +548,13 @@ const ProjectBoard = () => {
                                         </select>
                                     </div>
                                 </div>
+
+                                {/* Row 2: Description full width */}
+                                <div className="form-field">
+                                    <label>Description</label>
+                                    <textarea value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} rows="5"></textarea>
+                                </div>
+
                             </div>
                             <div className="add-task-modal-footer">
                                 <button type="submit" className="create-task-btn" disabled={isUpdating}>
@@ -592,20 +573,55 @@ const ProjectBoard = () => {
                     <div className="add-task-modal-content">
                         <div className="add-task-modal-header"><span>Edit task</span></div>
                         <form onSubmit={handleSaveTask} className="add-task-form">
-                            <div className="add-task-modal-body">
-                                <div className="form-left-column">
-                                    <div className="form-field">
+                            <div className="add-task-modal-body" style={{ flexDirection: 'column' }}>
+
+                                {/* Row 1: Title, Status, Priority */}
+                                <div className="form-row">
+                                    <div className="form-field" style={{ flex: 2 }}>
                                         <label>Title <span className="required-star">*</span></label>
                                         <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required />
                                     </div>
                                     <div className="form-field">
-                                        <label>Description</label>
-                                        <textarea value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} rows="6"></textarea>
+                                        <label>Status <span className="required-star">*</span></label>
+                                        <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
+                                            <option value=""></option>
+                                            <option value="To Do">To Do</option>
+                                            <option value="In Progress">In Progress</option>
+                                            <option value="Done">Done</option>
+                                        </select>
                                     </div>
+                                    <div className="form-field">
+                                        <label>Priority <span className="required-star">*</span></label>
+                                        <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required>
+                                            <option value=""></option>
+                                            <option value="Low">Low</option>
+                                            <option value="Medium">Medium</option>
+                                            <option value="High">High</option>
+                                        </select>
+                                    </div>
+                                </div>
 
-                                    {/* ── Mentor comment (read-only, shown if changes requested) ── */}
+                                {/* Row 2: Description full width */}
+                                <div className="form-field">
+                                    <label>Description</label>
+                                    <textarea value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} rows="4"></textarea>
+                                </div>
+
+                                {/* Row 3: Review Status + Mentor Feedback side by side */}
+                                <div className="review-mentor-row">
+                                    {currentTask.reviewStatus && (
+                                        <div className="form-field">
+                                            <label>Review Status</label>
+                                            <div className={`review-status-pill ${currentTask.reviewStatus}`}>
+                                                {currentTask.reviewStatus === 'pending' && '⏳ Awaiting Mentor Review'}
+                                                {currentTask.reviewStatus === 'reviewed' && '✅ Reviewed by Mentor'}
+                                                {currentTask.reviewStatus === 'changes_requested' && '🔄 Changes Requested'}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {currentTask.reviewStatus === 'changes_requested' && currentTask.mentorComment && (
-                                        <div className="form-field mt-2">
+                                        <div className="form-field">
                                             <label style={{ color: '#dc3545' }}>🔄 Mentor Feedback</label>
                                             <textarea
                                                 value={currentTask.mentorComment}
@@ -615,74 +631,46 @@ const ProjectBoard = () => {
                                             />
                                         </div>
                                     )}
-
-                                    <div className="media-upload-section mt-3">
-                                        <label className="fw-bold d-block mb-2">Attachments</label>
-                                        <div className="d-flex gap-2 mb-2">
-                                            <label className="btn btn-outline-primary btn-sm mb-0">
-                                                Add Image
-                                                <input type="file" hidden accept="image/*" multiple onChange={(e) => handleFileChange(e, 'photos')} />
-                                            </label>
-                                            <label className="btn btn-outline-info btn-sm mb-0">
-                                                Add Video
-                                                <input type="file" hidden accept="video/*" multiple onChange={(e) => handleFileChange(e, 'videos')} />
-                                            </label>
-                                        </div>
-                                        <div className="media-previews d-flex flex-wrap gap-2">
-                                            {newMedia.photos.map((src, i) => (
-                                                <div key={i} className="media-thumb">
-                                                    <img src={src} alt="thumb" />
-                                                    <div className="remove-media-overlay" onClick={() => removeMedia(i, 'photos')}><X size={12} /></div>
-                                                </div>
-                                            ))}
-                                            {newMedia.videos.map((src, i) => (
-                                                <div key={i} className="media-thumb">
-                                                    <video src={src} />
-                                                    <div className="remove-media-overlay" onClick={() => removeMedia(i, 'videos')}><X size={12} /></div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
                                 </div>
 
-                                <div className="form-right-column">
-                                    <div className="form-row">
-                                        <div className="form-field">
-                                            <label>Status <span className="required-star">*</span></label>
-                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
-                                                <option value=""></option>
-                                                <option value="To Do">To Do</option>
-                                                <option value="In Progress">In Progress</option>
-                                                <option value="Done">Done</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-field">
-                                            <label>Priority <span className="required-star">*</span></label>
-                                            <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required>
-                                                <option value=""></option>
-                                                <option value="Low">Low</option>
-                                                <option value="Medium">Medium</option>
-                                                <option value="High">High</option>
-                                            </select>
-                                        </div>
+                                {/* Attachments */}
+                                <div className="media-upload-section">
+                                    <label className="fw-bold d-block mb-2">Attachments</label>
+                                    <div className="d-flex gap-2 mb-2">
+                                        <label className="btn btn-outline-primary btn-sm mb-0">
+                                            Add Image
+                                            <input type="file" hidden accept="image/*" multiple onChange={(e) => handleFileChange(e, 'photos')} />
+                                        </label>
+                                        <label className="btn btn-outline-info btn-sm mb-0">
+                                            Add Video
+                                            <input type="file" hidden accept="video/*" multiple onChange={(e) => handleFileChange(e, 'videos')} />
+                                        </label>
                                     </div>
-
-                                    {/* Review status badge */}
-                                    {currentTask.reviewStatus && (
-                                        <div className="form-field mt-2">
-                                            <label>Review Status</label>
-                                            <div className={`review-status-pill ${currentTask.reviewStatus}`}>
-                                                {currentTask.reviewStatus === 'pending' && '⏳ Awaiting Mentor Review'}
-                                                {currentTask.reviewStatus === 'reviewed' && '✅ Reviewed by Mentor'}
-                                                {currentTask.reviewStatus === 'changes_requested' && '🔄 Changes Requested'}
+                                    <div className="media-previews d-flex flex-wrap gap-2">
+                                        {newMedia.photos.map((src, i) => (
+                                            <div key={i} className="media-thumb">
+                                                <img src={src} alt="thumb" />
+                                                <div className="remove-media-overlay" onClick={() => removeMedia(i, 'photos')}><X size={12} /></div>
                                             </div>
-                                        </div>
-                                    )}
+                                        ))}
+                                        {newMedia.videos.map((src, i) => (
+                                            <div key={i} className="media-thumb">
+                                                <video src={src} />
+                                                <div className="remove-media-overlay" onClick={() => removeMedia(i, 'videos')}><X size={12} /></div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
+
                             </div>
 
                             <div className="add-task-modal-footer">
-                                {/* ✅ NEW: Validate Task button */}
+                                {isLeader && (
+                                    <button type="button" className="delete-task-btn" onClick={handleDeleteTask}>
+                                        Delete Task
+                                    </button>
+                                )}
+
                                 {canValidate && currentTask.reviewStatus !== 'pending' && currentTask.reviewStatus !== 'reviewed' && (
                                     <button
                                         type="button"
@@ -701,12 +689,6 @@ const ProjectBoard = () => {
                                 <button type="submit" className="create-task-btn" disabled={isUpdating}>
                                     {isUpdating ? <><span className="spinner-border-custom"></span> Saving...</> : "Save Changes"}
                                 </button>
-
-                                {isLeader && (
-                                    <button type="button" className="btn btn-danger ms-2" onClick={handleDeleteTask} style={{ borderRadius: '12px' }}>
-                                        Delete Task
-                                    </button>
-                                )}
                             </div>
                         </form>
                         <div className="modal-close-icon" onClick={() => setIsViewTaskModalOpen(false)}><X size={20} /></div>
