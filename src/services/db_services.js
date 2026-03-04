@@ -428,6 +428,24 @@ export const getLatestNews = async (projId) => {
 };
 
 /**
+ * Fetches all news for a specific project.
+ */
+export const getAllNews = async (projId) => {
+    try {
+        const q = query(
+            collection(db, "news"),
+            where("prjid", "==", projId),
+            orderBy("createdAt", "desc")
+        );
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching all news:", error);
+    }
+    return [];
+};
+
+/**
  * Deletes a project and all its associated data.
  */
 export const deleteProject = async (projId) => {
@@ -636,6 +654,22 @@ export const sendNotification = async ({ recipientUid, senderName, senderPhoto, 
         });
     } catch (error) {
         console.error("Error sending notification:", error);
+        throw error;
+    }
+};
+
+/**
+ * Submits user feedback to the "feedback" collection.
+ * @param {Object} feedbackData 
+ */
+export const submitFeedback = async (feedbackData) => {
+    try {
+        await addDoc(collection(db, "feedback"), {
+            ...feedbackData,
+            createdAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error submitting feedback:", error);
         throw error;
     }
 };

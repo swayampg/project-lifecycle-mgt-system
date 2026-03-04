@@ -3,6 +3,7 @@ import './ProjectBoard.css';
 import { Plus, Minus, X, Edit2, Check, Layout, Send } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { auth, db } from './firebaseConfig';
+import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import {
     getProjectPhases,
@@ -46,7 +47,7 @@ const ProjectBoard = () => {
     const [newDeadline, setNewDeadline] = useState('');
     const [newStatus, setNewStatus] = useState('');
     const [newPriority, setNewPriority] = useState('');
-    const [newMedia, setNewMedia] = useState({ photos: [], videos: [] });
+    const [newMedia, setNewMedia] = useState({ files: [] });
 
     useEffect(() => {
         if (projectId) {
@@ -57,17 +58,21 @@ const ProjectBoard = () => {
     }, [projectId]);
 
     useEffect(() => {
-        const fetchUserData = async () => {
-            const user = auth.currentUser;
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists()) {
-                    setCurrentUserName(userDoc.data().fullName);
+                    const fullName = userDoc.data().fullName;
+                    setCurrentUserName(fullName);
+                    // Sync newAssignBy if we're in the middle of adding a task
+                    if (isAddTaskModalOpen) {
+                        setNewAssignBy(fullName);
+                    }
                 }
             }
-        };
-        fetchUserData();
-    }, []);
+        });
+        return () => unsubscribe();
+    }, [isAddTaskModalOpen]);
 
     const fetchProjectTeamAndPhases = async (id) => {
         setLoading(true);
@@ -170,33 +175,38 @@ const ProjectBoard = () => {
         setCurrentPhaseId(phaseId);
         setNewTaskName('');
         setNewTaskDescription('');
-        setNewAssignBy(currentUserName);
+        setNewAssignBy(currentUserName || '');
         setNewAssignTo('');
         setNewDeadline('');
         setNewStatus('In Progress');
         setNewPriority('Medium');
-        setNewMedia({ photos: [], videos: [] });
+        setNewMedia({ files: [] });
         setIsAddTaskModalOpen(true);
     };
 
-    const handleFileChange = (e, type) => {
+    const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
         files.forEach(file => {
             const reader = new FileReader();
             reader.onloadend = () => {
+                const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
                 setNewMedia(prev => ({
                     ...prev,
-                    [type]: [...prev[type], reader.result]
+                    files: [...(prev.files || []), {
+                        url: reader.result,
+                        name: file.name,
+                        type: fileType
+                    }]
                 }));
             };
             reader.readAsDataURL(file);
         });
     };
 
-    const removeMedia = (index, type) => {
+    const removeMedia = (index) => {
         setNewMedia(prev => ({
             ...prev,
-            [type]: prev[type].filter((_, i) => i !== index)
+            files: prev.files.filter((_, i) => i !== index)
         }));
     };
 
@@ -264,12 +274,21 @@ const ProjectBoard = () => {
         setCurrentPhaseId(phaseId);
         setNewTaskName(task.name);
         setNewTaskDescription(task.description);
-        setNewAssignBy(task.assignBy || '');
+        setNewAssignBy(task.assignBy || currentUserName || '');
         setNewAssignTo(task.assignTo || '');
         setNewDeadline(task.deadline || '');
         setNewStatus(task.status || '');
         setNewPriority(task.priority || '');
-        setNewMedia(task.media || { photos: [], videos: [] });
+        let normalizedMedia = task.media || { files: [] };
+        if (!normalizedMedia.files && (normalizedMedia.photos || normalizedMedia.videos)) {
+            normalizedMedia = {
+                files: [
+                    ...(normalizedMedia.photos || []).map(url => ({ url, type: 'photo' })),
+                    ...(normalizedMedia.videos || []).map(url => ({ url, type: 'video' }))
+                ]
+            };
+        }
+        setNewMedia(normalizedMedia);
         setIsViewTaskModalOpen(true);
     };
 
@@ -502,59 +521,98 @@ const ProjectBoard = () => {
                     <div className="add-task-modal-content">
                         <div className="add-task-modal-header"><span>Add new task</span></div>
                         <form onSubmit={handleAddTask} className="add-task-form">
-                            <div className="add-task-modal-body" style={{ flexDirection: 'column' }}>
+                            <div className="add-task-modal-body">
 
-                                {/* Row 1: Title, Status, Priority */}
-                                <div className="form-row">
-                                    <div className="form-field" style={{ flex: 2 }}>
-                                        <label>Title <span className="required-star">*</span></label>
-                                        <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus />
+                                <div className="modal-grid-layout">
+                                    {/* Column 1: Title + Description */}
+                                    <div className="grid-column">
+                                        <div className="form-field">
+                                            <label>Title <span className="required-star">*</span></label>
+                                            <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus />
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Description</label>
+                                            <textarea
+                                                value={newTaskDescription}
+                                                onChange={(e) => setNewTaskDescription(e.target.value)}
+                                            ></textarea>
+                                        </div>
                                     </div>
-                                    <div className="form-field">
-                                        <label>Assign by</label>
-                                        <input type="text" value={newAssignBy} readOnly className="bg-light" />
+
+                                    {/* Column 2: Assign by + Deadline + Priority */}
+                                    <div className="grid-column">
+                                        <div className="form-field">
+                                            <label>Assign by</label>
+                                            <input type="text" value={newAssignBy} readOnly className="bg-light" style={{ border: '1px solid #eef0f2' }} />
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Deadline</label>
+                                            <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Priority <span className="required-star">*</span></label>
+                                            <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required>
+                                                <option value=""></option>
+                                                <option value="Low">Low</option>
+                                                <option value="Medium">Medium</option>
+                                                <option value="High">High</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div className="form-field">
-                                        <label>Assign to</label>
-                                        <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required>
-                                            <option value="">Select Member</option>
-                                            {teamMembers.map(member => (
-                                                <option key={member.uid} value={member.fullName}>
-                                                    {member.fullName} ({member.role})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="form-field">
-                                        <label>Deadline</label>
-                                        <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
-                                    </div>
-                                    <div className="form-field">
-                                        <label>Status</label>
-                                        <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
-                                            <option value=""></option>
-                                            <option value="To Do">To Do</option>
-                                            <option value="In Progress">In Progress</option>
-                                            <option value="Done">Done</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-field">
-                                        <label>Priority <span className="required-star">*</span></label>
-                                        <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required>
-                                            <option value=""></option>
-                                            <option value="Low">Low</option>
-                                            <option value="Medium">Medium</option>
-                                            <option value="High">High</option>
-                                        </select>
+
+                                    {/* Column 3: Assign to + Status */}
+                                    <div className="grid-column">
+                                        <div className="form-field">
+                                            <label>Assign to</label>
+                                            <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required>
+                                                <option value="">Select Member</option>
+                                                {teamMembers.map(member => (
+                                                    <option key={member.uid} value={member.fullName}>
+                                                        {member.fullName} ({member.role})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Status</label>
+                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
+                                                <option value=""></option>
+                                                <option value="To Do">To Do</option>
+                                                <option value="In Progress">In Progress</option>
+                                                <option value="Done">Done</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Row 2: Description full width */}
-                                <div className="form-field">
-                                    <label>Description</label>
-                                    <textarea value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} rows="5"></textarea>
+                                {/* Attachments */}
+                                <div className="media-upload-section mt-4">
+                                    <label className="fw-bold d-block mb-2">Attachments</label>
+                                    <div className="d-flex gap-2 mb-2">
+                                        <label className="btn btn-outline-secondary btn-sm mb-0 d-flex align-items-center gap-1" style={{ borderRadius: '8px', padding: '6px 12px' }}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                                            Add Files
+                                            <input type="file" hidden multiple onChange={handleFileChange} />
+                                        </label>
+                                    </div>
+                                    <div className="media-previews d-flex flex-wrap gap-2">
+                                        {newMedia.files && newMedia.files.map((file, i) => (
+                                            <div key={i} className="media-thumb">
+                                                {file.type === 'photo' ? (
+                                                    <img src={file.url} alt={file.name} />
+                                                ) : file.type === 'video' ? (
+                                                    <video src={file.url} />
+                                                ) : (
+                                                    <div className="other-file-icon">
+                                                        <Layout size={24} />
+                                                        <span className="file-name-hint">{file.name}</span>
+                                                    </div>
+                                                )}
+                                                <div className="remove-media-overlay" onClick={() => removeMedia(i)}><X size={12} /></div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-
                             </div>
                             <div className="add-task-modal-footer">
                                 <button type="submit" className="create-task-btn" disabled={isUpdating}>
@@ -573,43 +631,73 @@ const ProjectBoard = () => {
                     <div className="add-task-modal-content">
                         <div className="add-task-modal-header"><span>Edit task</span></div>
                         <form onSubmit={handleSaveTask} className="add-task-form">
-                            <div className="add-task-modal-body" style={{ flexDirection: 'column' }}>
+                            <div className="add-task-modal-body">
 
-                                {/* Row 1: Title, Status, Priority */}
-                                <div className="form-row">
-                                    <div className="form-field" style={{ flex: 2 }}>
-                                        <label>Title <span className="required-star">*</span></label>
-                                        <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required />
+                                <div className="modal-grid-layout">
+                                    {/* Column 1: Title + Description */}
+                                    <div className="grid-column">
+                                        <div className="form-field">
+                                            <label>Title <span className="required-star">*</span></label>
+                                            <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus />
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Description</label>
+                                            <textarea
+                                                value={newTaskDescription}
+                                                onChange={(e) => setNewTaskDescription(e.target.value)}
+                                            ></textarea>
+                                        </div>
                                     </div>
-                                    <div className="form-field">
-                                        <label>Status <span className="required-star">*</span></label>
-                                        <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
-                                            <option value=""></option>
-                                            <option value="To Do">To Do</option>
-                                            <option value="In Progress">In Progress</option>
-                                            <option value="Done">Done</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-field">
-                                        <label>Priority <span className="required-star">*</span></label>
-                                        <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required>
-                                            <option value=""></option>
-                                            <option value="Low">Low</option>
-                                            <option value="Medium">Medium</option>
-                                            <option value="High">High</option>
-                                        </select>
-                                    </div>
-                                </div>
 
-                                {/* Row 2: Description full width */}
-                                <div className="form-field">
-                                    <label>Description</label>
-                                    <textarea value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} rows="4"></textarea>
+                                    {/* Column 2: Assign by + Deadline + Priority */}
+                                    <div className="grid-column">
+                                        <div className="form-field">
+                                            <label>Assign by</label>
+                                            <input type="text" value={newAssignBy} readOnly className="bg-light" style={{ border: '1px solid #eef0f2' }} />
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Deadline</label>
+                                            <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Priority <span className="required-star">*</span></label>
+                                            <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required>
+                                                <option value=""></option>
+                                                <option value="Low">Low</option>
+                                                <option value="Medium">Medium</option>
+                                                <option value="High">High</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Column 3: Assign to + Status */}
+                                    <div className="grid-column">
+                                        <div className="form-field">
+                                            <label>Assign to</label>
+                                            <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required>
+                                                <option value="">Select Member</option>
+                                                {teamMembers.map(member => (
+                                                    <option key={member.uid} value={member.fullName}>
+                                                        {member.fullName} ({member.role})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Status <span className="required-star">*</span></label>
+                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
+                                                <option value=""></option>
+                                                <option value="To Do">To Do</option>
+                                                <option value="In Progress">In Progress</option>
+                                                <option value="Done">Done</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Row 3: Review Status + Mentor Feedback side by side */}
-                                <div className="review-mentor-row">
-                                    {currentTask.reviewStatus && (
+                                {currentTask.reviewStatus && (
+                                    <div className="review-mentor-row mt-4">
                                         <div className="form-field">
                                             <label>Review Status</label>
                                             <div className={`review-status-pill ${currentTask.reviewStatus}`}>
@@ -618,45 +706,45 @@ const ProjectBoard = () => {
                                                 {currentTask.reviewStatus === 'changes_requested' && '🔄 Changes Requested'}
                                             </div>
                                         </div>
-                                    )}
 
-                                    {currentTask.reviewStatus === 'changes_requested' && currentTask.mentorComment && (
-                                        <div className="form-field">
-                                            <label style={{ color: '#dc3545' }}>🔄 Mentor Feedback</label>
-                                            <textarea
-                                                value={currentTask.mentorComment}
-                                                readOnly
-                                                rows="3"
-                                                style={{ backgroundColor: '#fff3f3', border: '1px solid #dc3545', borderRadius: '8px', padding: '8px', resize: 'none', width: '100%' }}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
+                                        {currentTask.reviewStatus === 'changes_requested' && currentTask.mentorComment && (
+                                            <div className="form-field">
+                                                <label style={{ color: '#dc3545' }}>🔄 Mentor Feedback</label>
+                                                <textarea
+                                                    value={currentTask.mentorComment}
+                                                    readOnly
+                                                    rows="3"
+                                                    style={{ backgroundColor: '#fff3f3', border: '1px solid #dc3545', borderRadius: '8px', padding: '8px', resize: 'none', width: '100%' }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* Attachments */}
                                 <div className="media-upload-section">
                                     <label className="fw-bold d-block mb-2">Attachments</label>
                                     <div className="d-flex gap-2 mb-2">
-                                        <label className="btn btn-outline-primary btn-sm mb-0">
-                                            Add Image
-                                            <input type="file" hidden accept="image/*" multiple onChange={(e) => handleFileChange(e, 'photos')} />
-                                        </label>
-                                        <label className="btn btn-outline-info btn-sm mb-0">
-                                            Add Video
-                                            <input type="file" hidden accept="video/*" multiple onChange={(e) => handleFileChange(e, 'videos')} />
+                                        <label className="btn btn-outline-secondary btn-sm mb-0 d-flex align-items-center gap-1" style={{ borderRadius: '8px', padding: '6px 12px' }}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                                            Add Files
+                                            <input type="file" hidden multiple onChange={handleFileChange} />
                                         </label>
                                     </div>
                                     <div className="media-previews d-flex flex-wrap gap-2">
-                                        {newMedia.photos.map((src, i) => (
+                                        {newMedia.files && newMedia.files.map((file, i) => (
                                             <div key={i} className="media-thumb">
-                                                <img src={src} alt="thumb" />
-                                                <div className="remove-media-overlay" onClick={() => removeMedia(i, 'photos')}><X size={12} /></div>
-                                            </div>
-                                        ))}
-                                        {newMedia.videos.map((src, i) => (
-                                            <div key={i} className="media-thumb">
-                                                <video src={src} />
-                                                <div className="remove-media-overlay" onClick={() => removeMedia(i, 'videos')}><X size={12} /></div>
+                                                {file.type === 'photo' ? (
+                                                    <img src={file.url} alt={file.name} />
+                                                ) : file.type === 'video' ? (
+                                                    <video src={file.url} />
+                                                ) : (
+                                                    <div className="other-file-icon">
+                                                        <Layout size={24} />
+                                                        <span className="file-name-hint">{file.name}</span>
+                                                    </div>
+                                                )}
+                                                <div className="remove-media-overlay" onClick={() => removeMedia(i)}><X size={12} /></div>
                                             </div>
                                         ))}
                                     </div>

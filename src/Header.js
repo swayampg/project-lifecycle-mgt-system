@@ -4,7 +4,7 @@ import { Search, Bell, Settings, User as UserIcon } from 'lucide-react';
 import { auth, db } from './firebaseConfig';
 import { doc, collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { getUserRoleInProject } from './services/db_services';
+import { getUserRoleInProject, getAllNews } from './services/db_services';
 import './Header.css';
 
 const Header = () => {
@@ -14,6 +14,8 @@ const Header = () => {
     const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
     const [notificationCount, setNotificationCount] = useState(0);
     const [latestNews, setLatestNews] = useState(null);
+    const [allNews, setAllNews] = useState([]);
+    const [isNewsModalOpen, setIsNewsModalOpen] = useState(false);
 
     const [currentUser, setCurrentUser] = useState(null);
 
@@ -103,124 +105,191 @@ const Header = () => {
         setIsProfilePopupOpen(!isProfilePopupOpen);
     };
 
-    return (
-        <header className="main-header d-flex justify-content-between align-items-center">
-            <div className="header-left-group d-flex align-items-center gap-5">
-                <div
-                    className="header-profile-section d-flex align-items-center"
-                    onClick={togglePopup}
-                    style={{ cursor: 'pointer', position: 'relative' }}
-                >
-                    {/* CHANGED: Dynamic image source from userData */}
-                    {userData.profilePicture ? (
-                        <img
-                            src={userData.profilePicture}
-                            alt="Profile"
-                            className="me-2 rounded-circle"
-                            style={{ width: '35px', height: '35px', objectFit: 'cover' }}
-                        />
-                    ) : (
-                        <div className="me-2 rounded-circle bg-light d-flex align-items-center justify-content-center" style={{ width: '35px', height: '35px' }}>
-                            <UserIcon size={20} color="#878d9fff" />
-                        </div>
-                    )}
+    const openNewsModal = async (e) => {
+        if (e) e.stopPropagation();
+        const selectedProjectId = localStorage.getItem('selectedProjectId');
+        console.log("Opening News Modal. Project ID:", selectedProjectId);
 
-                    <div>
-                        <div className="fw-bold small text-nowrap">{userData.fullName}</div>
-                        {projectRole && (
-                            <div className="small opacity-75" style={{ fontSize: '11px' }}>
-                                {projectRole}
+        if (!selectedProjectId) {
+            alert("No project selected. Please go to a project dashboard first.");
+            return;
+        }
+
+        setIsNewsModalOpen(true);
+        try {
+            const news = await getAllNews(selectedProjectId);
+            setAllNews(news || []);
+        } catch (error) {
+            console.error("Failed to fetch news history:", error);
+            setAllNews([]);
+        }
+    };
+
+    return (
+        <>
+            <header className="main-header d-flex justify-content-between align-items-center">
+                <div className="header-left-group d-flex align-items-center gap-4">
+                    <div
+                        className="header-profile-section d-flex align-items-center"
+                        onClick={togglePopup}
+                        style={{ cursor: 'pointer', position: 'relative' }}
+                    >
+                        {/* CHANGED: Dynamic image source from userData */}
+                        {userData.profilePicture ? (
+                            <img
+                                src={userData.profilePicture}
+                                alt="Profile"
+                                className="me-2 rounded-circle"
+                                style={{ width: '35px', height: '35px', objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <div className="me-2 rounded-circle bg-light d-flex align-items-center justify-content-center" style={{ width: '35px', height: '35px' }}>
+                                <UserIcon size={20} color="#878d9fff" />
+                            </div>
+                        )}
+
+                        <div>
+                            <div className="fw-bold small text-nowrap">{userData.fullName}</div>
+                            {projectRole && (
+                                <div className="small opacity-75" style={{ fontSize: '11px' }}>
+                                    {projectRole}
+                                </div>
+                            )}
+                        </div>
+
+                        {isProfilePopupOpen && (
+                            <div className="profile-dropdown-popup shadow" onClick={(e) => e.stopPropagation()}>
+                                <div className="profile-popup-header d-flex align-items-center mb-3">
+                                    {/* CHANGED: Dynamic image in popup */}
+                                    {userData.profilePicture ? (
+                                        <img
+                                            src={userData.profilePicture}
+                                            alt="Profile Large"
+                                            className="rounded-circle me-3"
+                                            style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                                        />
+                                    ) : (
+                                        <div className="rounded-circle me-3 bg-light d-flex align-items-center justify-content-center" style={{ width: '50px', height: '50px' }}>
+                                            <UserIcon size={30} color="#878d9fff" />
+                                        </div>
+                                    )}
+                                    <div className="overflow-hidden">
+                                        <div className="fw-bold text-dark text-truncate">{userData.fullName}</div>
+                                        <div className="text-muted small text-truncate">{userData.email}</div>
+                                    </div>
+                                </div>
+                                <div className="profile-popup-options">
+                                    <button className="popup-option-btn" onClick={() => navigate('/profile')}>
+                                        View Profile
+                                    </button>
+                                    <button className="popup-option-btn" onClick={() => navigate('/Mytask')}>
+                                        My Tasks
+                                    </button>
+                                    <button className="popup-option-btn" onClick={() => navigate('/notifications')}>
+                                        Notifications
+                                    </button>
+                                    <button className="popup-option-btn" onClick={() => navigate('/feedback')}>
+                                        Feedback
+                                    </button>
+                                    <hr className="my-2" />
+                                    <button className="popup-option-btn logout-btn" onClick={handleLogout}>
+                                        Log Out
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
 
-                    {isProfilePopupOpen && (
-                        <div className="profile-dropdown-popup shadow" onClick={(e) => e.stopPropagation()}>
-                            <div className="profile-popup-header d-flex align-items-center mb-3">
-                                {/* CHANGED: Dynamic image in popup */}
-                                {userData.profilePicture ? (
-                                    <img
-                                        src={userData.profilePicture}
-                                        alt="Profile Large"
-                                        className="rounded-circle me-3"
-                                        style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                                    />
-                                ) : (
-                                    <div className="rounded-circle me-3 bg-light d-flex align-items-center justify-content-center" style={{ width: '50px', height: '50px' }}>
-                                        <UserIcon size={30} color="#878d9fff" />
-                                    </div>
-                                )}
-                                <div className="overflow-hidden">
-                                    <div className="fw-bold text-dark text-truncate">{userData.fullName}</div>
-                                    <div className="text-muted small text-truncate">{userData.email}</div>
-                                </div>
-                            </div>
-                            <div className="profile-popup-options">
-                                <button className="popup-option-btn" onClick={() => navigate('/profile')}>
-                                    View Profile
-                                </button>
-                                <button className="popup-option-btn" onClick={() => navigate('/Mytask')}>
-                                    My Tasks
-                                </button>
-                                <button className="popup-option-btn" onClick={() => navigate('/notifications')}>
-                                    Notifications
-                                </button>
-                                <hr className="my-2" />
-                                <button className="popup-option-btn logout-btn" onClick={handleLogout}>
-                                    Log Out
-                                </button>
-                            </div>
+                    <div className="header-search-box">
+                        <div className="input-group input-group-sm">
+                            <span className="input-group-text bg-white border-end-0">
+                                <Search size={14} />
+                            </span>
+                            <input
+                                type="text"
+                                className="form-control border-start-0 shadow-none"
+                                placeholder="Search"
+                            />
                         </div>
-                    )}
-                </div>
+                    </div>
 
-                <div className="header-search-box">
-                    <div className="input-group input-group-sm">
-                        <span className="input-group-text bg-white border-end-0">
-                            <Search size={14} />
-                        </span>
-                        <input
-                            type="text"
-                            className="form-control border-start-0 shadow-none"
-                            placeholder="Search"
-                        />
+                    <div className="header-news-ticker-container d-flex align-items-center gap-2">
+                        <div className="header-news-ticker">
+                            {latestNews ? (
+                                <div className="ticker-content">
+                                    <span className="ticker-label">LATEST NEWS:</span>
+                                    <span className="ticker-message">{latestNews.message}</span>
+                                </div>
+                            ) : (
+                                <div className="ticker-content empty">
+                                    <span className="ticker-message">No news updates yet</span>
+                                </div>
+                            )}
+                        </div>
+                        <button className="view-all-news-btn" onClick={(e) => openNewsModal(e)}>View All</button>
                     </div>
                 </div>
 
-                <div className="header-news-ticker">
-                    {latestNews ? (
-                        <div className="ticker-content">
-                            <span className="ticker-label">LATEST NEWS:</span>
-                            <span className="ticker-message">{latestNews.message}</span>
-                        </div>
-                    ) : (
-                        <div className="ticker-content empty">
-                            <span className="ticker-message">No news updates yet</span>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <div className="header-actions d-flex align-items-center gap-3">
-                <div style={{ position: 'relative' }}>
-                    <Bell
+                <div className="header-actions d-flex align-items-center gap-3">
+                    <div style={{ position: 'relative' }}>
+                        <Bell
+                            size={20}
+                            className="header-icon cursor-pointer"
+                            onClick={() => navigate('/notifications')}
+                        />
+                        {notificationCount > 0 && (
+                            <span className="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-danger"
+                                style={{ fontSize: '10px', padding: '4px 6px', marginTop: '2px' }}>
+                                {notificationCount}
+                            </span>
+                        )}
+                    </div>
+                    <Settings
                         size={20}
                         className="header-icon cursor-pointer"
-                        onClick={() => navigate('/notifications')}
                     />
-                    {notificationCount > 0 && (
-                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-danger"
-                            style={{ fontSize: '10px', padding: '4px 6px', marginTop: '2px' }}>
-                            {notificationCount}
-                        </span>
-                    )}
                 </div>
-                <Settings
-                    size={20}
-                    className="header-icon cursor-pointer"
-                />
-            </div>
-        </header >
+            </header >
+
+            {
+                isNewsModalOpen && (
+                    <div className="news-history-modal-overlay">
+                        <div className="news-history-modal shadow-lg">
+                            <div className="modal-header border-bottom-0 pb-0">
+                                <h5 className="fw-bold mb-0">Project News History</h5>
+                                <button className="btn-close" onClick={() => setIsNewsModalOpen(false)}></button>
+                            </div>
+                            <div className="modal-body py-4" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                                {allNews.length > 0 ? (
+                                    <div className="news-list">
+                                        {allNews.map((news) => (
+                                            <div key={news.id} className="news-history-item mb-3 p-3 rounded shadow-sm border">
+                                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                                    <span className="fw-bold text-primary">{news.senderName || 'Mentor'}</span>
+                                                    <small className="text-muted">
+                                                        {news.createdAt?.toDate ? news.createdAt.toDate().toLocaleString() : new Date(news.createdAt).toLocaleString()}
+                                                    </small>
+                                                </div>
+                                                <div className="news-message text-dark">
+                                                    {news.message}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-muted py-5">
+                                        No news history available for this project.
+                                    </div>
+                                )}
+                            </div>
+                            <div className="modal-footer border-top-0 pt-0">
+                                <button className="btn btn-secondary w-100" style={{ borderRadius: '8px' }} onClick={() => setIsNewsModalOpen(false)}>Close</button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </>
     );
 };
 

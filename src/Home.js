@@ -206,20 +206,20 @@ const Home = () => {
                 <div className="row g-4">
                     <div className="col-md-4">
                         <div
-                            className="stat-card p-3 d-flex align-items-center gap-3 cursor-pointer"
+                            className="stat-card gap-3 cursor-pointer"
                             onClick={() => navigate('/CreateProject')}
                         >
                             <div className="icon-box bg-primary">
-                                <Plus color="white" />
+                                <Plus color="white" size={24} />
                             </div>
                             <span className="fw-bold">Create New Project</span>
                         </div>
                     </div>
 
                     <div className="col-md-4">
-                        <div className="stat-card p-3 d-flex align-items-center gap-3">
+                        <div className="stat-card gap-3">
                             <div className="icon-box bg-dark">
-                                <Folder color="white" />
+                                <Folder color="white" size={24} />
                             </div>
                             <div>
                                 <div className="small text-muted fw-bold">Total Projects</div>
@@ -229,9 +229,9 @@ const Home = () => {
                     </div>
 
                     <div className="col-md-4">
-                        <div className="stat-card p-3 d-flex align-items-center gap-3">
+                        <div className="stat-card gap-3">
                             <div className="icon-box bg-primary">
-                                <CheckSquare color="white" />
+                                <CheckSquare color="white" size={24} />
                             </div>
                             <div>
                                 <div className="small text-muted fw-bold">Your Tasks</div>
