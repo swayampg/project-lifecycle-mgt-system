@@ -281,11 +281,12 @@ export const getProjectPhases = async (projId) => {
     try {
         const q = query(
             collection(db, "project-phases"),
-            where("proj_id", "==", projId),
-            orderBy("order", "asc")
+            where("proj_id", "==", projId)
         );
         const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const phasesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Sort in memory to handle phases that might not have the 'order' field yet
+        return phasesData.sort((a, b) => (a.order || 0) - (b.order || 0));
     } catch (error) {
         console.error("Error fetching project phases:", error);
         return [];
