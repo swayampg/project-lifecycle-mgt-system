@@ -2,6 +2,7 @@
 
 /* Main wrapper for the notification content */
 .notification-wrapper {
+    background-color: transparent;
     border-radius: 15px;
     min-height: 60vh;
 }
@@ -29,7 +30,8 @@
 
 /* Active state for toggle buttons (Blue background) */
 .filter-btn.active {
-    background: #1a4a8a; /* Dark blue color from your image */
+    background: #1a4a8a;
+    /* Dark blue color from your image */
     color: white;
 }
 

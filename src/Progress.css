@@ -1,6 +1,6 @@
 /* Ensure the whole page takes up the full screen */
 .plm-dashboard-container {
-    background-color: #f8f9fa;
+    background-color: transparent;
     min-height: 100vh;
     margin: 0;
     padding: 0;

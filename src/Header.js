@@ -4,7 +4,7 @@ import { Search, Bell, Settings, User as UserIcon } from 'lucide-react';
 import { auth, db } from './firebaseConfig';
 import { doc, collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { getUserRoleInProject, getAllNews } from './services/db_services';
+import { getUserRoleInProject, getAllNews, getUserProjects } from './services/db_services';
 import './Header.css';
 
 const Header = () => {
@@ -16,6 +16,10 @@ const Header = () => {
     const [latestNews, setLatestNews] = useState(null);
     const [allNews, setAllNews] = useState([]);
     const [isNewsModalOpen, setIsNewsModalOpen] = useState(false);
+    const [userProjects, setUserProjects] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filteredProjects, setFilteredProjects] = useState([]);
+    const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
 
     const [currentUser, setCurrentUser] = useState(null);
 
@@ -44,11 +48,10 @@ const Header = () => {
     useEffect(() => {
         if (!currentUser) return;
 
-        const selectedProjectId = localStorage.getItem('selectedProjectId');
-        if (!selectedProjectId) return;
+        // 1. GLOBAL LISTENERS (Always run when logged in)
 
-        // Fetch project role
-        getUserRoleInProject(selectedProjectId, currentUser.uid).then(setProjectRole);
+        // Fetch all projects for global search
+        getUserProjects(currentUser.uid).then(setUserProjects);
 
         // Real-time listener for invitations
         const inviteQuery = query(
@@ -60,20 +63,33 @@ const Header = () => {
             setNotificationCount(snapshot.size);
         });
 
-        // Real-time news listener
-        const newsQuery = query(
-            collection(db, "news"),
-            where("prjid", "==", selectedProjectId),
-            orderBy("createdAt", "desc"),
-            limit(1)
-        );
-        const unsubscribeNews = onSnapshot(newsQuery, (snapshot) => {
-            if (!snapshot.empty) {
-                setLatestNews(snapshot.docs[0].data());
-            }
-        }, (error) => {
-            console.error("Header news listener error:", error);
-        });
+        // 2. PROJECT-SPECIFIC LISTENERS (Run only if a project is selected)
+        const selectedProjectId = localStorage.getItem('selectedProjectId');
+
+        let unsubscribeNews = () => { };
+
+        if (selectedProjectId) {
+            // Fetch project role
+            getUserRoleInProject(selectedProjectId, currentUser.uid).then(setProjectRole);
+
+            // Real-time news listener
+            const newsQuery = query(
+                collection(db, "news"),
+                where("prjid", "==", selectedProjectId),
+                orderBy("createdAt", "desc"),
+                limit(1)
+            );
+            unsubscribeNews = onSnapshot(newsQuery, (snapshot) => {
+                if (!snapshot.empty) {
+                    setLatestNews(snapshot.docs[0].data());
+                }
+            }, (error) => {
+                console.error("Header news listener error:", error);
+            });
+        } else {
+            setProjectRole(null);
+            setLatestNews(null);
+        }
 
         return () => {
             unsubscribeInvites();
@@ -86,10 +102,13 @@ const Header = () => {
             if (isProfilePopupOpen && !event.target.closest('.header-profile-section') && !event.target.closest('.profile-dropdown-popup')) {
                 setIsProfilePopupOpen(false);
             }
+            if (isSearchDropdownOpen && !event.target.closest('.header-search-box')) {
+                setIsSearchDropdownOpen(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isProfilePopupOpen]);
+    }, [isProfilePopupOpen, isSearchDropdownOpen]);
 
     const handleLogout = async () => {
         try {
@@ -122,6 +141,34 @@ const Header = () => {
         } catch (error) {
             console.error("Failed to fetch news history:", error);
             setAllNews([]);
+        }
+    };
+
+    const handleSearchChange = (e) => {
+        const queryStr = e.target.value;
+        setSearchQuery(queryStr);
+
+        if (queryStr.trim().length > 0) {
+            const filtered = userProjects.filter(p =>
+                p.Name.toLowerCase().includes(queryStr.toLowerCase()) ||
+                (p.category && p.category.toLowerCase().includes(queryStr.toLowerCase()))
+            );
+            setFilteredProjects(filtered);
+            setIsSearchDropdownOpen(true);
+        } else {
+            setFilteredProjects([]);
+            setIsSearchDropdownOpen(false);
+        }
+    };
+
+    const handleProjectSelect = (projectId) => {
+        localStorage.setItem('selectedProjectId', projectId);
+        setIsSearchDropdownOpen(false);
+        setSearchQuery('');
+        navigate('/project-board');
+        // Force a reload if already on project-board to refresh context
+        if (window.location.hash.includes('/project-board')) {
+            window.location.reload();
         }
     };
 
@@ -202,7 +249,7 @@ const Header = () => {
                         )}
                     </div>
 
-                    <div className="header-search-box">
+                    <div className="header-search-box position-relative">
                         <div className="input-group input-group-sm">
                             <span className="input-group-text bg-white border-end-0">
                                 <Search size={14} />
@@ -210,9 +257,32 @@ const Header = () => {
                             <input
                                 type="text"
                                 className="form-control border-start-0 shadow-none"
-                                placeholder="Search"
+                                placeholder="Search Projects..."
+                                value={searchQuery}
+                                onChange={handleSearchChange}
+                                onFocus={() => searchQuery.trim() && setIsSearchDropdownOpen(true)}
                             />
                         </div>
+
+                        {isSearchDropdownOpen && filteredProjects.length > 0 && (
+                            <div className="search-results-dropdown shadow">
+                                {filteredProjects.map(project => (
+                                    <div
+                                        key={project.proj_id}
+                                        className="search-result-item d-flex flex-column"
+                                        onClick={() => handleProjectSelect(project.proj_id)}
+                                    >
+                                        <span className="result-name">{project.Name}</span>
+                                        <span className="result-meta">{project.category} • {project.userRole}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {isSearchDropdownOpen && searchQuery.trim() && filteredProjects.length === 0 && (
+                            <div className="search-results-dropdown shadow p-3 text-center text-muted small">
+                                No projects found matching "{searchQuery}"
+                            </div>
+                        )}
                     </div>
 
                     <div className="header-news-ticker-container d-flex align-items-center gap-2">
@@ -252,6 +322,8 @@ const Header = () => {
                     />
                 </div>
             </header >
+            {/* Spacer to prevent content from going under the fixed header */}
+            <div style={{ height: '70px' }}></div>
 
             {
                 isNewsModalOpen && (

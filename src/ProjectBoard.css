@@ -1,8 +1,99 @@
 /* Project Board Container */
 .project-board-container {
-    background-color: #f4f7fe;
+    background: transparent !important;
     min-height: 100vh;
     padding-bottom: 120px;
+}
+
+/* Board Header Enhancement */
+.board-header {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 20px 30px;
+    margin: 10px 20px 25px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.project-titles h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 6px !important;
+    letter-spacing: -0.5px;
+}
+
+.project-meta-pills {
+    display: flex;
+    gap: 10px;
+}
+
+.meta-pill {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 50px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.meta-pill.category {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.meta-pill.department {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.date-range-info {
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.date-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.date-label {
+    font-size: 0.65rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.date-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.date-separator {
+    width: 1px;
+    height: 30px;
+    background: #cbd5e1;
+    margin: 0 20px;
 }
 
 /* Header styles removed, now using Header.css */
@@ -33,18 +124,74 @@
     background: #fff;
     border-radius: 10px;
     border: 1px solid #4facfe;
-    /* Blue borders for column */
+    /* Default border */
     overflow: hidden;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
 .column-header {
     background-color: #1a4d8c;
+    /* Default header */
     color: white;
     padding: 8px 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+/* Color Coding for Phases */
+/* Phase 1 - Blue */
+.board-column:nth-child(6n+1) {
+    border-color: #1e40af;
+}
+
+.board-column:nth-child(6n+1) .column-header {
+    background-color: #1e40af;
+}
+
+/* Phase 2 - Emerald/Teal */
+.board-column:nth-child(6n+2) {
+    border-color: #059669;
+}
+
+.board-column:nth-child(6n+2) .column-header {
+    background-color: #059669;
+}
+
+/* Phase 3 - Violet/Indigo */
+.board-column:nth-child(6n+3) {
+    border-color: #4f46e5;
+}
+
+.board-column:nth-child(6n+3) .column-header {
+    background-color: #4f46e5;
+}
+
+/* Phase 4 - Amber/Orange */
+.board-column:nth-child(6n+4) {
+    border-color: #d97706;
+}
+
+.board-column:nth-child(6n+4) .column-header {
+    background-color: #d97706;
+}
+
+/* Phase 5 - Pink/Crimson */
+.board-column:nth-child(6n+5) {
+    border-color: #db2777;
+}
+
+.board-column:nth-child(6n+5) .column-header {
+    background-color: #db2777;
+}
+
+/* Phase 6 - Slate/Gray */
+.board-column:nth-child(6n+6) {
+    border-color: #475569;
+}
+
+.board-column:nth-child(6n+6) .column-header {
+    background-color: #475569;
 }
 
 .column-header h6 {
@@ -61,6 +208,29 @@
     display: flex;
     gap: 8px;
     align-items: center;
+}
+
+.move-phase-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, opacity 0.2s;
+    opacity: 0.8;
+}
+
+.move-phase-btn:hover:not(:disabled) {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.move-phase-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
 }
 
 .edit-phase-input-group {
@@ -278,7 +448,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
+    z-index: 1040;
 }
 
 .modal-content {

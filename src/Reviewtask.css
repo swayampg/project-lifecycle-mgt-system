@@ -21,7 +21,8 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    pointer-events: none; /* let backdrop clicks pass through */
+    pointer-events: none;
+    /* let backdrop clicks pass through */
 }
 
 /* ══════════════════════════════════════════
@@ -38,8 +39,10 @@
     max-height: 92vh;
 
     /* ✅ FIX 1: overlay scrollbar sits ON TOP of content, no gutter line */
-    overflow-y: overlay;          /* Chrome/Edge */
-    overflow-y: auto;             /* Fallback for Firefox */
+    overflow-y: overlay;
+    /* Chrome/Edge */
+    overflow-y: auto;
+    /* Fallback for Firefox */
 
     box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.35);
     display: flex;
@@ -57,11 +60,13 @@
 }
 
 .review-modal-box::-webkit-scrollbar-track {
-    background: transparent;   /* ← removes the visible track/line */
+    background: transparent;
+    /* ← removes the visible track/line */
 }
 
 .review-modal-box::-webkit-scrollbar-thumb {
-    background: transparent;   /* hidden by default */
+    background: transparent;
+    /* hidden by default */
     border-radius: 8px;
     transition: background 0.2s;
 }
@@ -374,7 +379,9 @@
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ══════════════════════════════════════════
@@ -383,7 +390,7 @@
 .review-lightbox {
     position: fixed;
     inset: 0;
-    z-index: 2000;
+    z-index: 1040;
     background: rgba(0, 0, 0, 0.92);
     display: flex;
     align-items: center;
@@ -422,11 +429,13 @@
     }
 
     .review-top-row .review-field:first-child {
-        grid-column: 1 / -1; /* Title takes full width on mobile */
+        grid-column: 1 / -1;
+        /* Title takes full width on mobile */
     }
 
     .review-mid-row {
-        grid-template-columns: 1fr; /* Stack on mobile */
+        grid-template-columns: 1fr;
+        /* Stack on mobile */
     }
 
     .review-modal-body {

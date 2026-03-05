@@ -172,12 +172,13 @@ export const createProjectWithTeam = async (formData, userUid, creatorRole = "Pr
             'Completions'
         ];
 
-        for (const phaseName of defaultPhases) {
+        for (let i = 0; i < defaultPhases.length; i++) {
             await addDoc(collection(db, "project-phases"), {
                 phaseId: `phase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                phaseName: phaseName,
+                phaseName: defaultPhases[i],
                 proj_id: proj_id,
                 projectName: formData.projectTitle,
+                order: i,
                 tasks: []
             });
         }
@@ -278,7 +279,11 @@ export const deleteProjectTask = async (taskId) => {
  */
 export const getProjectPhases = async (projId) => {
     try {
-        const q = query(collection(db, "project-phases"), where("proj_id", "==", projId));
+        const q = query(
+            collection(db, "project-phases"),
+            where("proj_id", "==", projId),
+            orderBy("order", "asc")
+        );
         const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -292,11 +297,16 @@ export const getProjectPhases = async (projId) => {
  */
 export const addProjectPhase = async (projId, phaseName, projectName = "") => {
     try {
+        // Get current phases to determine the next order
+        const currentPhases = await getProjectPhases(projId);
+        const nextOrder = currentPhases.length;
+
         const phaseData = {
             phaseId: `phase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             phaseName: phaseName,
             proj_id: projId,
             projectName: projectName,
+            order: nextOrder,
             tasks: []
         };
         const docRef = await addDoc(collection(db, "project-phases"), phaseData);
@@ -331,6 +341,23 @@ export const updateProjectPhase = async (docId, updates) => {
         await updateDoc(docRef, updates);
     } catch (error) {
         console.error("Error updating project phase:", error);
+        throw error;
+    }
+};
+
+/**
+ * Updates the order of multiple phases.
+ * @param {Array} updatedPhases - List of phase objects with id and new order
+ */
+export const updatePhasesOrder = async (updatedPhases) => {
+    try {
+        const promises = updatedPhases.map(phase => {
+            const docRef = doc(db, "project-phases", phase.id);
+            return updateDoc(docRef, { order: phase.order });
+        });
+        await Promise.all(promises);
+    } catch (error) {
+        console.error("Error updating phases order:", error);
         throw error;
     }
 };
@@ -670,6 +697,28 @@ export const submitFeedback = async (feedbackData) => {
         });
     } catch (error) {
         console.error("Error submitting feedback:", error);
+        throw error;
+    }
+};
+
+/**
+ * Updates a project details.
+ */
+export const updateProject = async (projId, updates) => {
+    try {
+        const q = query(collection(db, "projects"), where("proj_id", "==", projId));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            const projectDoc = snap.docs[0];
+            await updateDoc(projectDoc.ref, updates);
+
+            // If the name was updated, update it in phases too
+            if (updates.Name) {
+                await updateProjectNameInPhases(projId, updates.Name);
+            }
+        }
+    } catch (error) {
+        console.error("Error updating project:", error);
         throw error;
     }
 };

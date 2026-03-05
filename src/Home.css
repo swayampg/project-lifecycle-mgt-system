@@ -1,6 +1,6 @@
 /* Dashboard Container */
 .dashboard-container {
-    background-color: #f4f7fe;
+    background-color: transparent !important;
     /* Light grey/blue background */
     min-height: 100vh;
     padding-bottom: 100px;
@@ -63,6 +63,30 @@
     border-radius: 20px;
     min-height: 300px;
     border: 1px solid #e2e8f0;
+}
+
+.project-list-scroller {
+    max-height: 520px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 12px;
+}
+
+.project-list-scroller::-webkit-scrollbar {
+    width: 6px;
+}
+
+.project-list-scroller::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.project-list-scroller::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+.project-list-scroller::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
 }
 
 .project-item-card {
@@ -144,7 +168,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
+    z-index: 1040;
 }
 
 .modal-content-custom {
@@ -207,4 +231,77 @@
 
 .animate-pulse {
     animation: pulse 2s infinite ease-in-out;
+}
+
+/* Project Details Modal Specifics */
+.details-modal {
+    max-width: 550px !important;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    border: none !important;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.scroller-detail {
+    overflow-y: auto;
+    padding-right: 12px;
+}
+
+.scroller-detail::-webkit-scrollbar {
+    width: 5px;
+}
+
+.scroller-detail::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+}
+
+.scroller-detail::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 20px;
+}
+
+.scroller-detail::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+
+.detail-section label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.detail-section h4 {
+    margin-top: 4px;
+    letter-spacing: -0.01em;
+}
+
+.team-list-detail {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #f1f5f9 !important;
+    background: #ffffff !important;
+}
+
+.last-border-none {
+    transition: background-color 0.2s;
+}
+
+.last-border-none:hover {
+    background-color: #f8fbff;
+}
+
+.last-border-none:last-child {
+    border-bottom: none !important;
+}
+
+.modal-footer-custom {
+    background: #f8fafc;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    padding: 20px 24px !important;
 }

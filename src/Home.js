@@ -11,10 +11,11 @@ import {
     getProjectTeamMembers,
     requestProjectDeletion,
     cancelProjectDeletion,
-    updateMemberConsent
+    updateMemberConsent,
+    updateProject
 } from './services/db_services';
 import './Home.css';
-import { Plus, Folder, CheckSquare, Trash2, UserPlus, Search, X, Check, AlertCircle } from 'lucide-react';
+import { Plus, Folder, CheckSquare, Trash2, UserPlus, Search, X, Check, AlertCircle, Info, Edit2, Layers, Briefcase, Users, User, UserCheck } from 'lucide-react';
 import Swal from 'sweetalert2';
 import BottomNav from './BottomNav';
 import Header from './Header';
@@ -32,6 +33,14 @@ const Home = () => {
     const [projectForInvite, setProjectForInvite] = useState(null);
     const [invitationData, setInvitationData] = useState({ email: '', role: 'Member' });
     const [isSearching, setIsSearching] = useState(false);
+
+    // Project Details Modal State
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [projectForDetails, setProjectForDetails] = useState(null);
+    const [detailsTeamMembers, setDetailsTeamMembers] = useState([]);
+    const [isEditingDetails, setIsEditingDetails] = useState(false);
+    const [editedProjectData, setEditedProjectData] = useState({ Name: '', description: '' });
+    const [isSavingDetails, setIsSavingDetails] = useState(false);
 
 
     const fetchData = async (user) => {
@@ -195,6 +204,41 @@ const Home = () => {
         }
     };
 
+    const openDetailsModal = async (e, project) => {
+        e.stopPropagation();
+        setProjectForDetails(project);
+        setEditedProjectData({ Name: project.Name, description: project.description || '' });
+        setIsDetailsModalOpen(true);
+        setIsEditingDetails(false);
+        try {
+            const team = await getProjectTeamMembers(project.proj_id);
+            setDetailsTeamMembers(team);
+        } catch (error) {
+            console.error("Error fetching project team:", error);
+        }
+    };
+
+    const handleSaveDetails = async () => {
+        if (!editedProjectData.Name.trim()) {
+            Swal.fire('Error', 'Project Title cannot be empty.', 'error');
+            return;
+        }
+
+        setIsSavingDetails(true);
+        try {
+            await updateProject(projectForDetails.proj_id, editedProjectData);
+            Swal.fire({ icon: 'success', title: 'Updated!', timer: 1500, showConfirmButton: false });
+            setIsEditingDetails(false);
+            // Refresh local state
+            setProjectForDetails({ ...projectForDetails, ...editedProjectData });
+            fetchData(currentUser);
+        } catch (error) {
+            Swal.fire('Error', 'Failed to update project details.', 'error');
+        } finally {
+            setIsSavingDetails(false);
+        }
+    };
+
     return (
         <div className="dashboard-container">
             <Header />
@@ -247,84 +291,93 @@ const Home = () => {
                     {loading ? (
                         <div className="text-center p-5 text-muted">Loading projects...</div>
                     ) : projects.length > 0 ? (
-                        <div className="row g-4">
-                            {projects.map((project) => (
-                                <div key={project.id} className="col-12">
-                                    <div
-                                        className={`project-item-card p-3 shadow-sm border rounded-3 bg-white cursor-pointer d-flex justify-content-between align-items-center ${selectedProjectId === project.proj_id ? 'selected' : ''}`}
-                                        onClick={() => {
-                                            setSelectedProjectId(project.proj_id);
-                                            localStorage.setItem('selectedProjectId', project.proj_id);
-                                            navigate('/project-board');
-                                        }}
-                                    >
-                                        <div className="project-info-left" style={{ flex: '1' }}>
-                                            <h6 className="project-name mb-0 text-primary">{project.Name}</h6>
-                                            <span className="badge bg-light text-dark small">{project.category}</span>
-                                        </div>
-
-                                        <div className="project-info-middle text-center" style={{ flex: '1' }}>
-                                            <div className="text-muted small">
-                                                <strong>{project.userRole}:</strong> {currentUser?.displayName}
+                        <div className="project-list-scroller">
+                            <div className="row g-4">
+                                {projects.map((project) => (
+                                    <div key={project.id} className="col-12">
+                                        <div
+                                            className={`project-item-card p-3 shadow-sm border rounded-3 bg-white cursor-pointer d-flex justify-content-between align-items-center ${selectedProjectId === project.proj_id ? 'selected' : ''}`}
+                                            onClick={() => {
+                                                setSelectedProjectId(project.proj_id);
+                                                localStorage.setItem('selectedProjectId', project.proj_id);
+                                                navigate('/project-board');
+                                            }}
+                                        >
+                                            <div className="project-info-left" style={{ flex: '1' }}>
+                                                <h6 className="project-name mb-0 text-primary">{project.Name}</h6>
+                                                <span className="badge bg-light text-dark small">{project.category}</span>
                                             </div>
-                                            {project.deletionStatus === 'pending' && (
-                                                <div className="mt-1">
-                                                    <span className="badge bg-warning text-dark animate-pulse">
-                                                        <AlertCircle size={10} className="me-1" />
-                                                        Deletion Pending
-                                                    </span>
+
+                                            <div className="project-info-middle text-center" style={{ flex: '1' }}>
+                                                <div className="text-muted small">
+                                                    <strong>{project.userRole}:</strong> {currentUser?.displayName}
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        <div className="project-info-right d-flex align-items-center justify-content-between" style={{ flex: '1' }}>
-                                            <div className="d-flex flex-column small text-muted">
-                                                <span><strong>Start:</strong> {project.startDate}</span>
-                                                <span><strong>End:</strong> {project.endDate}</span>
-                                            </div>
-                                            <div className="project-actions d-flex gap-2">
-                                                {project.deletionStatus === 'pending' && project.userRole !== 'Project Leader' && project.userRole !== 'Leader' ? (
-                                                    <div className="d-flex gap-1 align-items-center">
-                                                        <button
-                                                            className={`btn btn-sm ${project.userConsent ? 'btn-success' : 'btn-outline-success'} action-btn-wide`}
-                                                            onClick={(e) => handleConsent(e, project, true)}
-                                                            title="Approve Deletion"
-                                                        >
-                                                            <Check size={14} className="me-1" /> {project.userConsent ? 'Approved' : 'Approve'}
-                                                        </button>
-                                                        <button
-                                                            className="btn btn-sm btn-outline-danger action-btn"
-                                                            onClick={(e) => handleConsent(e, project, false)}
-                                                            title="Reject Deletion"
-                                                        >
-                                                            <X size={14} />
-                                                        </button>
+                                                {project.deletionStatus === 'pending' && (
+                                                    <div className="mt-1">
+                                                        <span className="badge bg-warning text-dark animate-pulse">
+                                                            <AlertCircle size={10} className="me-1" />
+                                                            Deletion Pending
+                                                        </span>
                                                     </div>
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            className="btn btn-sm btn-outline-primary action-btn"
-                                                            title="Invite Members"
-                                                            onClick={(e) => openInviteModal(e, project)}
-                                                        >
-                                                            <UserPlus size={16} />
-                                                        </button>
-                                                        {(project.userRole === 'Project Leader' || project.userRole === 'Leader') && (
-                                                            <button
-                                                                className={`btn btn-sm ${project.deletionStatus === 'pending' ? 'btn-warning' : 'btn-outline-danger'} action-btn`}
-                                                                title={project.deletionStatus === 'pending' ? 'Check Consent Status' : 'Request Deletion'}
-                                                                onClick={(e) => handleDeleteProject(e, project)}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        )}
-                                                    </>
                                                 )}
+                                            </div>
+
+                                            <div className="project-info-right d-flex align-items-center justify-content-between" style={{ flex: '1' }}>
+                                                <div className="d-flex flex-column small text-muted">
+                                                    <span><strong>Start:</strong> {project.startDate}</span>
+                                                    <span><strong>End:</strong> {project.endDate}</span>
+                                                </div>
+                                                <div className="project-actions d-flex gap-2">
+                                                    <button
+                                                        className="btn btn-sm btn-outline-info action-btn"
+                                                        title="View Details"
+                                                        onClick={(e) => openDetailsModal(e, project)}
+                                                    >
+                                                        <Info size={16} />
+                                                    </button>
+                                                    {project.deletionStatus === 'pending' && project.userRole !== 'Project Leader' && project.userRole !== 'Leader' ? (
+                                                        <div className="d-flex gap-1 align-items-center">
+                                                            <button
+                                                                className={`btn btn-sm ${project.userConsent ? 'btn-success' : 'btn-outline-success'} action-btn-wide`}
+                                                                onClick={(e) => handleConsent(e, project, true)}
+                                                                title="Approve Deletion"
+                                                            >
+                                                                <Check size={14} className="me-1" /> {project.userConsent ? 'Approved' : 'Approve'}
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-outline-danger action-btn"
+                                                                onClick={(e) => handleConsent(e, project, false)}
+                                                                title="Reject Deletion"
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <button
+                                                                className="btn btn-sm btn-outline-primary action-btn"
+                                                                title="Invite Members"
+                                                                onClick={(e) => openInviteModal(e, project)}
+                                                            >
+                                                                <UserPlus size={16} />
+                                                            </button>
+                                                            {(project.userRole === 'Project Leader' || project.userRole === 'Leader') && (
+                                                                <button
+                                                                    className={`btn btn-sm ${project.deletionStatus === 'pending' ? 'btn-warning' : 'btn-outline-danger'} action-btn`}
+                                                                    title={project.deletionStatus === 'pending' ? 'Check Consent Status' : 'Request Deletion'}
+                                                                    onClick={(e) => handleDeleteProject(e, project)}
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     ) : (
                         <div className="text-center p-5 border rounded bg-white text-muted">
@@ -379,6 +432,134 @@ const Home = () => {
                                     {isSearching ? "Searching..." : "Send Invitation"}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                )}
+                {/* Project Details Modal */}
+                {isDetailsModalOpen && projectForDetails && (
+                    <div className="modal-overlay">
+                        <div className="modal-content-custom details-modal">
+                            <div className="modal-header-custom d-flex justify-content-between border-bottom pb-3">
+                                <div>
+                                    <h5 className="m-0 fw-bold text-primary">Project Details</h5>
+                                </div>
+                                <button className="btn-close-custom bg-transparent border-0" onClick={() => setIsDetailsModalOpen(false)}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="modal-body-custom py-4 scroller-detail">
+                                <div className="detail-section mb-4">
+                                    <div className="d-flex justify-content-between align-items-center mb-2">
+                                        <label className="form-label mb-0 d-flex align-items-center gap-2">
+                                            <Layers size={16} /> Project Title
+                                        </label>
+                                        {(projectForDetails.userRole === 'Project Leader' || projectForDetails.userRole === 'Leader') && !isEditingDetails && (
+                                            <button className="btn btn-link btn-sm text-primary p-0" onClick={() => setIsEditingDetails(true)}>
+                                                <Edit2 size={14} /> Edit
+                                            </button>
+                                        )}
+                                    </div>
+                                    {isEditingDetails ? (
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={editedProjectData.Name}
+                                            onChange={(e) => setEditedProjectData({ ...editedProjectData, Name: e.target.value })}
+                                        />
+                                    ) : (
+                                        <h4 className="text-primary fw-bold">{projectForDetails.Name}</h4>
+                                    )}
+                                </div>
+
+                                <div className="detail-section mb-4">
+                                    <label className="form-label d-flex align-items-center gap-2">
+                                        <Edit2 size={16} /> Description
+                                    </label>
+                                    {isEditingDetails ? (
+                                        <textarea
+                                            className="form-control"
+                                            rows="4"
+                                            value={editedProjectData.description}
+                                            onChange={(e) => setEditedProjectData({ ...editedProjectData, description: e.target.value })}
+                                        ></textarea>
+                                    ) : (
+                                        <p className="text-muted">{projectForDetails.description || 'No description provided.'}</p>
+                                    )}
+                                </div>
+
+                                <div className="row mb-4 text-secondary">
+                                    <div className="col-6">
+                                        <label className="form-label d-flex align-items-center gap-2">
+                                            <Layers size={16} /> Category
+                                        </label>
+                                        <div className="fw-bold text-dark">{projectForDetails.category}</div>
+                                    </div>
+                                    <div className="col-6">
+                                        <label className="form-label d-flex align-items-center gap-2">
+                                            <Briefcase size={16} /> Department
+                                        </label>
+                                        <div className="fw-bold text-dark">{projectForDetails.department}</div>
+                                    </div>
+                                </div>
+
+                                <div className="row mb-4">
+                                    <div className="col-6">
+                                        <label className="form-label d-flex align-items-center gap-2">
+                                            <UserCheck size={16} /> Project Leader
+                                        </label>
+                                        <div className="text-primary fw-bold">
+                                            {detailsTeamMembers.find(m => m.role === 'Project Leader' || m.role === 'Leader')?.fullName || projectForDetails.projectLeader || 'N/A'}
+                                        </div>
+                                    </div>
+                                    <div className="col-6">
+                                        <label className="form-label d-flex align-items-center gap-2">
+                                            <User size={16} className="text-success" /> Mentor
+                                        </label>
+                                        <div className="text-success fw-bold">
+                                            {detailsTeamMembers.find(m => m.role === 'Mentor')?.fullName || 'No Mentor assigned'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="detail-section">
+                                    <label className="form-label d-flex align-items-center gap-2">
+                                        <Users size={16} /> Team Members ({detailsTeamMembers.length})
+                                    </label>
+                                    <div className="team-list-detail border rounded-3 p-2 bg-light mt-1">
+                                        {detailsTeamMembers.map((member, index) => (
+                                            <div key={index} className="d-flex justify-content-between align-items-center p-2 border-bottom last-border-none">
+                                                <span className="small fw-semibold">{member.fullName}</span>
+                                                <span className={`badge ${member.role === 'Leader' || member.role === 'Project Leader' ? 'bg-primary' : member.role === 'Mentor' ? 'bg-success' : 'bg-secondary'}`}>
+                                                    {member.role}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {isEditingDetails && (
+                                <div className="modal-footer-custom border-top pt-3 d-flex gap-2">
+                                    <button
+                                        className="btn btn-secondary flex-grow-1"
+                                        onClick={() => {
+                                            setIsEditingDetails(false);
+                                            setEditedProjectData({ Name: projectForDetails.Name, description: projectForDetails.description || '' });
+                                        }}
+                                        disabled={isSavingDetails}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="btn btn-primary flex-grow-1"
+                                        onClick={handleSaveDetails}
+                                        disabled={isSavingDetails}
+                                    >
+                                        {isSavingDetails ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

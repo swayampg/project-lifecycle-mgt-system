@@ -1,6 +1,6 @@
 .feedback-container {
     padding: 40px 20px;
-    background-color: #f8f9fa;
+    background-color: transparent;
     min-height: calc(100vh - 120px);
     display: flex;
     justify-content: center;

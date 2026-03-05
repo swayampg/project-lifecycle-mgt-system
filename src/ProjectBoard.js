@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ProjectBoard.css';
-import { Plus, Minus, X, Edit2, Check, Layout, Send } from 'lucide-react';
+import { Plus, Minus, X, Edit2, Check, Layout, Send, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { auth, db } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -10,6 +10,7 @@ import {
     addProjectPhase,
     updateProjectPhase,
     deleteProjectPhase,
+    updatePhasesOrder,
     getProjectById,
     getProjectTeamMembers,
     addProjectTask,
@@ -163,6 +164,31 @@ const ProjectBoard = () => {
     const cancelEditing = () => {
         setEditingPhaseId(null);
         setEditPhaseTitle('');
+    };
+
+    const handleMovePhase = async (phaseId, direction) => {
+        const index = phases.findIndex(p => p.id === phaseId);
+        if (index === -1) return;
+
+        const newIndex = direction === 'left' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= phases.length) return;
+
+        const newPhases = [...phases];
+        const [movedPhase] = newPhases.splice(index, 1);
+        newPhases.splice(newIndex, 0, movedPhase);
+
+        // Update local state immediately for UX
+        setPhases(newPhases);
+
+        try {
+            // Prepare the order update for DB
+            const orderUpdates = newPhases.map((p, i) => ({ id: p.id, order: i }));
+            await updatePhasesOrder(orderUpdates);
+        } catch (error) {
+            console.error("Error updating phases order:", error);
+            // Optionally revert local state on error
+            // fetchProjectTeamAndPhases(projectId); 
+        }
     };
 
     const handleResetBoard = () => {
@@ -422,10 +448,28 @@ const ProjectBoard = () => {
                 </div>
             ) : (
                 <>
-                    <div className="board-header mb-4 d-flex justify-content-between align-items-center">
-                        <div>
-                            <h2 className="m-0 text-primary">{project?.Name || "Project Board"}</h2>
-                            {project?.category && <span className="badge bg-light text-muted border">{project.category}</span>}
+                    <div className="board-header shadow-sm">
+                        <div className="header-left">
+                            <div className="project-titles">
+                                <h2 className="m-0 text-primary">{project?.Name || "Project Board"}</h2>
+                                <div className="project-meta-pills">
+                                    {project?.category && <span className="meta-pill category">{project.category}</span>}
+                                    {project?.department && <span className="meta-pill department">{project.department}</span>}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="header-right">
+                            <div className="date-range-info">
+                                <div className="date-item">
+                                    <span className="date-label">Start Date</span>
+                                    <span className="date-value">{project?.startDate || 'N/A'}</span>
+                                </div>
+                                <div className="date-separator"></div>
+                                <div className="date-item">
+                                    <span className="date-label">End Date</span>
+                                    <span className="date-value">{project?.endDate || 'N/A'}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -437,7 +481,7 @@ const ProjectBoard = () => {
                             </div>
                         ) : (
                             <div className="board-columns">
-                                {phases.map((phase) => (
+                                {phases.map((phase, index) => (
                                     <div key={phase.id} className="board-column">
                                         <div className="column-header">
                                             {editingPhaseId === phase.id ? (
@@ -461,6 +505,22 @@ const ProjectBoard = () => {
                                                     <div className="header-actions">
                                                         {isLeader && (
                                                             <>
+                                                                <button
+                                                                    className="move-phase-btn"
+                                                                    onClick={() => handleMovePhase(phase.id, 'left')}
+                                                                    disabled={index === 0}
+                                                                    title="Move Left"
+                                                                >
+                                                                    <ChevronLeft size={14} />
+                                                                </button>
+                                                                <button
+                                                                    className="move-phase-btn"
+                                                                    onClick={() => handleMovePhase(phase.id, 'right')}
+                                                                    disabled={index === phases.length - 1}
+                                                                    title="Move Right"
+                                                                >
+                                                                    <ChevronRight size={14} />
+                                                                </button>
                                                                 <Edit2 size={14} className="cursor-pointer" onClick={() => startEditing(phase.id, phase.title)} />
                                                                 <Minus size={14} className="cursor-pointer" onClick={() => handleRemovePhase(phase.id)} />
                                                             </>
