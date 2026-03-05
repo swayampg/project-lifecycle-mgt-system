@@ -9,14 +9,18 @@ const BottomNav = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [role, setRole] = useState(null);
+    const [selectedProjectId, setSelectedProjectId] = useState(null);
 
     useEffect(() => {
         const fetchRole = async () => {
             const user = auth.currentUser;
-            const selectedProjectId = localStorage.getItem('selectedProjectId');
-            if (user && selectedProjectId) {
-                const userRole = await getUserRoleInProject(selectedProjectId, user.uid);
+            const projectId = localStorage.getItem('selectedProjectId');
+            setSelectedProjectId(projectId);
+            if (user && projectId) {
+                const userRole = await getUserRoleInProject(projectId, user.uid);
                 setRole(userRole);
+            } else {
+                setRole(null);
             }
         };
         fetchRole();
@@ -45,13 +49,15 @@ const BottomNav = () => {
             >
                 <Activity size={20} />
             </button>
-            <button
-                className={`bottom-nav-btn ${isActive('/Mytask') ? 'active' : ''}`}
-                onClick={() => navigate('/Mytask')}
-            >
-                <Grid size={20} />
-            </button>
-            {role === 'Mentor' && (
+            {(role !== 'Mentor' || !selectedProjectId) && (
+                <button
+                    className={`bottom-nav-btn ${isActive('/Mytask') ? 'active' : ''}`}
+                    onClick={() => navigate('/Mytask')}
+                >
+                    <Grid size={20} />
+                </button>
+            )}
+            {role === 'Mentor' && selectedProjectId && (
                 <button
                     className={`bottom-nav-btn ${isActive('/mentorDashboard') ? 'active' : ''}`}
                     onClick={() => navigate('/mentorDashboard')}

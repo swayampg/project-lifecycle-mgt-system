@@ -182,9 +182,11 @@ const Header = () => {
                                     <button className="popup-option-btn" onClick={() => navigate('/profile')}>
                                         View Profile
                                     </button>
-                                    <button className="popup-option-btn" onClick={() => navigate('/Mytask')}>
-                                        My Tasks
-                                    </button>
+                                    {projectRole !== 'Mentor' && (
+                                        <button className="popup-option-btn" onClick={() => navigate('/Mytask')}>
+                                            My Tasks
+                                        </button>
+                                    )}
                                     <button className="popup-option-btn" onClick={() => navigate('/notifications')}>
                                         Notifications
                                     </button>
