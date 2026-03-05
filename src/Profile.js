@@ -51,7 +51,7 @@ const Profile = () => {
                     icon: 'warning',
                     title: 'File too large',
                     text: 'Image size should be less than 1MB',
-                    confirmButtonColor: '#3085d6'
+                    confirmButtonColor: '#1a4d8c'
                 });
                 return;
             }
@@ -65,13 +65,13 @@ const Profile = () => {
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
-        
-        // --- NEW: VALIDATION FOR 10 DIGITS ---
-        if (editData.enrollmentNo && editData.enrollmentNo.length !== 10) {
+
+        if (editData.enrollmentNo && editData.enrollmentNo.length !== 9) {
             Swal.fire({
                 icon: 'error',
                 title: 'Invalid Enrollment',
-                text: 'Enrollment number must be exactly 10 digits.',
+                text: 'Enrollment number must be exactly 9 digits.',
+                confirmButtonColor: '#1a4d8c'
             });
             return;
         }
@@ -96,7 +96,7 @@ const Profile = () => {
             await updateDoc(userRef, updatePayload);
             setUserData(editData);
             setIsEditModalOpen(false);
-            
+
             Swal.fire({
                 icon: 'success',
                 title: 'Updated!',
@@ -111,6 +111,7 @@ const Profile = () => {
                 icon: 'error',
                 title: 'Oops...',
                 text: 'Failed to update profile.',
+                confirmButtonColor: '#1a4d8c'
             });
         } finally {
             setIsUpdating(false);
@@ -187,7 +188,7 @@ const Profile = () => {
 
                                     <div className="img-detail-item">
                                         <label>Contact Information</label>
-                                        <p>Email: {userData.email || 'abc@gmai.com'}</p>
+                                        <p>Email: {userData.email || 'abc@gmail.com'}</p>
                                         <hr />
                                     </div>
                                 </div>
@@ -232,17 +233,25 @@ const Profile = () => {
                                 </div>
                                 <p className="small text-muted mt-2">Click icon to change picture</p>
                             </div>
+
+                            {/* ── Full Name: alphabets and spaces only ── */}
                             <div className="mb-4">
                                 <label className="form-label fw-bold small text-secondary">FULL NAME</label>
                                 <input
                                     type="text"
                                     className="form-control"
                                     value={editData.fullName}
-                                    onChange={(e) => setEditData({ ...editData, fullName: e.target.value })}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (/^[a-zA-Z\s]*$/.test(val)) {
+                                            setEditData({ ...editData, fullName: val });
+                                        }
+                                    }}
                                     placeholder="Enter your full name"
                                     required
                                 />
                             </div>
+
                             <div className="mb-4">
                                 <label className="form-label fw-bold small text-secondary">DEPARTMENT</label>
                                 <select
@@ -254,7 +263,6 @@ const Profile = () => {
                                     <option value="Computer Engineering">Computer Engineering</option>
                                     <option value="Mechanical Engineering">Mechanical Engineering</option>
                                     <option value="Electrical and Electronic Engineering">Electrical and Electronic Engineering</option>
-                                    <option value="Information Technology">Information Technology</option>
                                 </select>
                             </div>
                             <div className="mb-4">
@@ -265,20 +273,19 @@ const Profile = () => {
                                     value={editData.enrollmentNo || ''}
                                     onChange={(e) => {
                                         const val = e.target.value;
-                                        // --- INTEGRATED: LIMIT TO 10 DIGITS AND NUMBERS ONLY ---
-                                        if (val.length <= 10 && /^[0-9]*$/.test(val)) {
+                                        if (val.length < 10 && /^[0-9]*$/.test(val)) {
                                             setEditData({ ...editData, enrollmentNo: val });
                                         }
                                     }}
-                                    placeholder="Enter 10-digit number"
+                                    placeholder="Enter Enrollment Number"
                                 />
                                 <div className="text-end small text-muted mt-1">
-                                    {editData.enrollmentNo?.length || 0}/10
+                                    {editData.enrollmentNo?.length || 0}/9
                                 </div>
                             </div>
-                            
-                            <button 
-                                type="submit" 
+
+                            <button
+                                type="submit"
                                 className="btn btn-primary w-100 save-btn py-3 mt-2 d-flex align-items-center justify-content-center gap-2"
                                 disabled={isUpdating}
                             >
