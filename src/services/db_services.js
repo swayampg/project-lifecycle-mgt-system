@@ -723,3 +723,19 @@ export const updateProject = async (projId, updates) => {
         throw error;
     }
 };
+
+/**
+ * Counts total tasks assigned to a specific user across all projects.
+ */
+export const getTotalTasksCountByAssignee = async (userName) => {
+    try {
+        if (!userName) return 0;
+        const q = query(collection(db, "Tasks"), where("assignTo", "==", userName));
+        const snapshot = await getDocs(q);
+        return snapshot.size;
+    } catch (error) {
+        console.error("Error fetching total tasks count:", error);
+        return 0;
+    }
+};
+

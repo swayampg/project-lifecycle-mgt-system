@@ -21,6 +21,8 @@ import {
 import { sendTaskForReview } from './services/db_services';
 import BottomNav from './BottomNav';
 import Header from './Header';
+import Swal from 'sweetalert2';
+
 
 const ProjectBoard = () => {
     const projectId = localStorage.getItem('selectedProjectId');
@@ -128,21 +130,50 @@ const ProjectBoard = () => {
             }]);
         } catch (error) {
             console.error("Error adding phase:", error);
-            alert("Failed to add phase. Please try again.");
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to add phase. Please try again.',
+                icon: 'error',
+                confirmButtonColor: '#1a4d8c'
+            });
         }
+
     };
 
     const handleRemovePhase = async (phaseId) => {
-        if (window.confirm("Are you sure you want to remove this phase?")) {
-            try {
-                await deleteProjectPhase(phaseId);
-                setPhases(prev => prev.filter(p => p.id !== phaseId));
-            } catch (error) {
-                console.error("Error removing phase:", error);
-                alert("Failed to remove phase.");
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Are you sure you want to remove this phase?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#1a4d8c',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, remove it!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await deleteProjectPhase(phaseId);
+                    setPhases(prev => prev.filter(p => p.id !== phaseId));
+                    Swal.fire({
+                        title: 'Removed!',
+                        text: 'The phase has been removed.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } catch (error) {
+                    console.error("Error removing phase:", error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Failed to remove phase.',
+                        icon: 'error',
+                        confirmButtonColor: '#1a4d8c'
+                    });
+                }
             }
-        }
+        });
     };
+
 
     const startEditing = (phaseId, currentTitle) => {
         setEditingPhaseId(phaseId);
@@ -157,8 +188,14 @@ const ProjectBoard = () => {
             setEditingPhaseId(null);
         } catch (error) {
             console.error("Error renaming phase:", error);
-            alert("Failed to rename phase.");
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to rename phase.',
+                icon: 'error',
+                confirmButtonColor: '#1a4d8c'
+            });
         }
+
     };
 
     const cancelEditing = () => {
@@ -192,10 +229,28 @@ const ProjectBoard = () => {
     };
 
     const handleResetBoard = () => {
-        if (window.confirm("Are you sure you want to reset the board? This will clear all phases.")) {
-            setPhases([]);
-        }
+        Swal.fire({
+            title: 'Reset Board?',
+            text: "Are you sure you want to reset the board? This will clear all phases.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#1a4d8c',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, reset it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                setPhases([]);
+                Swal.fire({
+                    title: 'Reset Complete',
+                    text: 'The board has been cleared.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+        });
     };
+
 
     const openAddTaskModal = (phaseId) => {
         setCurrentPhaseId(phaseId);
@@ -267,8 +322,14 @@ const ProjectBoard = () => {
             setIsAddTaskModalOpen(false);
         } catch (error) {
             console.error("Error adding task:", error);
-            alert("Failed to add task.");
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to add task.',
+                icon: 'error',
+                confirmButtonColor: '#1a4d8c'
+            });
         } finally {
+
             setIsUpdating(false);
         }
     };
@@ -346,8 +407,14 @@ const ProjectBoard = () => {
             setIsViewTaskModalOpen(false);
         } catch (error) {
             console.error("Error updating task:", error);
-            alert("Failed to update task.");
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to update task.',
+                icon: 'error',
+                confirmButtonColor: '#1a4d8c'
+            });
         } finally {
+
             setIsUpdating(false);
         }
     };
@@ -397,35 +464,70 @@ const ProjectBoard = () => {
             }));
 
             setIsViewTaskModalOpen(false);
-            alert("Task sent to mentor for validation!");
+            Swal.fire({
+                title: 'Sent!',
+                text: 'Task sent to mentor for validation!',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
         } catch (error) {
             console.error("Error sending task for review:", error);
-            alert("Failed to send task for review.");
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to send task for review.',
+                icon: 'error',
+                confirmButtonColor: '#1a4d8c'
+            });
         } finally {
+
             setIsSendingToMentor(false);
         }
     };
 
     const handleDeleteTask = async () => {
-        if (window.confirm("Are you sure you want to delete this task?")) {
-            try {
-                await deleteProjectTask(currentTask.id);
-                setPhases(prev => prev.map(p => {
-                    if (p.id === currentPhaseId) {
-                        return {
-                            ...p,
-                            tasks: p.tasks.filter(t => t.id !== currentTask.id)
-                        };
-                    }
-                    return p;
-                }));
-                setIsViewTaskModalOpen(false);
-            } catch (error) {
-                console.error("Error deleting task:", error);
-                alert("Failed to delete task.");
+        Swal.fire({
+            title: 'Delete Task?',
+            text: "Are you sure you want to delete this task?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#1a4d8c',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await deleteProjectTask(currentTask.id);
+                    setPhases(prev => prev.map(p => {
+                        if (p.id === currentPhaseId) {
+                            return {
+                                ...p,
+                                tasks: p.tasks.filter(t => t.id !== currentTask.id)
+                            };
+                        }
+                        return p;
+                    }));
+                    setIsViewTaskModalOpen(false);
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: 'The task has been deleted.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } catch (error) {
+                    console.error("Error deleting task:", error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Failed to delete task.',
+                        icon: 'error',
+                        confirmButtonColor: '#1a4d8c'
+                    });
+                }
             }
-        }
+        });
     };
+
 
     const isTaskAssignedToMe = currentTask?.assignTo === currentUserName;
     const canValidate = (isMember && isTaskAssignedToMe) || isLeader;

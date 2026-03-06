@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from './firebaseConfig';
+import { auth, db } from './firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
+
 import { onAuthStateChanged } from 'firebase/auth';
 import {
     getUserProjects,
@@ -12,8 +14,10 @@ import {
     requestProjectDeletion,
     cancelProjectDeletion,
     updateMemberConsent,
-    updateProject
+    updateProject,
+    getTotalTasksCountByAssignee
 } from './services/db_services';
+
 import './Home.css';
 import { Plus, Folder, CheckSquare, Trash2, UserPlus, Search, X, Check, AlertCircle, Info, Edit2, Layers, Briefcase, Users, User, UserCheck } from 'lucide-react';
 import Swal from 'sweetalert2';
@@ -23,6 +27,7 @@ import Header from './Header';
 const Home = () => {
     const navigate = useNavigate();
     const [projects, setProjects] = useState([]);
+    const [totalTasksCount, setTotalTasksCount] = useState(0);
 
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
@@ -47,14 +52,25 @@ const Home = () => {
         if (!user) return;
         setLoading(true);
         try {
-            const projs = await getUserProjects(user.uid);
+            const [projs, userDocSnap] = await Promise.all([
+                getUserProjects(user.uid),
+                getDoc(doc(db, "users", user.uid))
+            ]);
+
             setProjects(projs);
+
+            if (userDocSnap.exists()) {
+                const fullName = userDocSnap.data().fullName;
+                const taskCount = await getTotalTasksCountByAssignee(fullName);
+                setTotalTasksCount(taskCount);
+            }
         } catch (error) {
             console.error("Error fetching home data:", error);
         } finally {
             setLoading(false);
         }
     };
+
 
     useEffect(() => {
         // Clear selected project when visiting Home
@@ -212,7 +228,14 @@ const Home = () => {
         setIsEditingDetails(false);
         try {
             const team = await getProjectTeamMembers(project.proj_id);
-            setDetailsTeamMembers(team);
+            // Sort: Mentor (1) > Leader (2) > others (3)
+            const sortedTeam = team.sort((a, b) => {
+                const roleOrder = { 'Mentor': 1, 'Leader': 2, 'Project Leader': 2 };
+                const orderA = roleOrder[a.role] || 3;
+                const orderB = roleOrder[b.role] || 3;
+                return orderA - orderB;
+            });
+            setDetailsTeamMembers(sortedTeam);
         } catch (error) {
             console.error("Error fetching project team:", error);
         }
@@ -279,8 +302,9 @@ const Home = () => {
                             </div>
                             <div>
                                 <div className="small text-muted fw-bold">Your Tasks</div>
-                                <div className="h5 mb-0">0</div>
+                                <div className="h5 mb-0">{totalTasksCount}</div>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -354,13 +378,16 @@ const Home = () => {
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <button
-                                                                className="btn btn-sm btn-outline-primary action-btn"
-                                                                title="Invite Members"
-                                                                onClick={(e) => openInviteModal(e, project)}
-                                                            >
-                                                                <UserPlus size={16} />
-                                                            </button>
+                                                            {(project.userRole === 'Project Leader' || project.userRole === 'Leader') && (
+                                                                <button
+                                                                    className="btn btn-sm btn-outline-primary action-btn"
+                                                                    title="Invite Members"
+                                                                    onClick={(e) => openInviteModal(e, project)}
+                                                                >
+                                                                    <UserPlus size={16} />
+                                                                </button>
+                                                            )}
+
                                                             {(project.userRole === 'Project Leader' || project.userRole === 'Leader') && (
                                                                 <button
                                                                     className={`btn btn-sm ${project.deletionStatus === 'pending' ? 'btn-warning' : 'btn-outline-danger'} action-btn`}
