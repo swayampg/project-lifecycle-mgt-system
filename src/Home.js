@@ -19,7 +19,7 @@ import {
 } from './services/db_services';
 
 import './Home.css';
-import { Plus, Folder, CheckSquare, Trash2, UserPlus, Search, X, Check, AlertCircle, Info, Edit2, Layers, Briefcase, Users, User, UserCheck } from 'lucide-react';
+import { Plus, Folder, CheckSquare, Trash2, UserPlus, Search, X, Check, AlertCircle, Info, Edit2, Layers, Briefcase, Users, User, UserCheck, CheckCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 import BottomNav from './BottomNav';
 import Header from './Header';
@@ -336,6 +336,13 @@ const Home = () => {
                                                 <div className="text-muted small">
                                                     <strong>{project.userRole}:</strong> {currentUser?.displayName}
                                                 </div>
+                                                {project.status === 'Completed' && (
+                                                    <div className="mt-1">
+                                                        <span className="badge bg-success-soft text-success d-flex align-items-center gap-1 justify-content-center">
+                                                            <CheckCircle size={10} /> Completed
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 {project.deletionStatus === 'pending' && (
                                                     <div className="mt-1">
                                                         <span className="badge bg-warning text-dark animate-pulse">

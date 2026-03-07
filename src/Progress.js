@@ -76,10 +76,10 @@ const Progress = () => {
 
             {/* --- MAIN TIMELINE CONTENT --- */}
             <main className="plm-content-area">
-                <div className="d-flex justify-content-between align-items-center mb-4">
+                <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
                     <h2 className="timeline-title mb-0">Project TimeLine</h2>
                     {project && (
-                        <div className="project-context-badge">
+                        <div className="project-context-badge mt-0">
                             <span className="text-muted small">Project: </span>
                             <span className="fw-bold text-primary">{project.Name}</span>
                         </div>

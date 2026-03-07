@@ -14,6 +14,8 @@ import Notifications from './Notifications';
 import MentorDashboard from './mentorDashboard';
 import Reviewtask from './Reviewtask';
 import Feedback from './Feedback';
+import CompletedProjects from './CompletedProjects';
+import GlobalGlobeNav from './GlobalGlobeNav';
 
 
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -36,8 +38,10 @@ function App() {
         <Route path="/mentorDashboard" element={<MentorDashboard />} />
         <Route path="/Reviewtask" element={<Reviewtask />} />
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/completed-projects" element={<CompletedProjects />} />
 
       </Routes>
+      <GlobalGlobeNav />
     </Router>
   );
 }

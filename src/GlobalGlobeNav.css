@@ -1,0 +1,91 @@
+.global-globe-nav {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    z-index: 9999;
+}
+
+.globe-nav-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    box-shadow: 0 10px 25px rgba(29, 78, 216, 0.4);
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.globe-nav-btn::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.globe-nav-btn:hover {
+    transform: scale(1.15) rotate(15deg);
+    box-shadow: 0 15px 35px rgba(29, 78, 216, 0.6);
+}
+
+.globe-nav-btn:hover::before {
+    opacity: 1;
+}
+
+.globe-nav-btn:active {
+    transform: scale(0.95);
+}
+
+.nav-label {
+    position: absolute;
+    left: 70px;
+    background: #1e293b;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    transform: translateX(-10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.globe-nav-btn:hover+.nav-label {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Glassmorphism variation if requested */
+.globe-nav-btn.glass {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #1a4d8c;
+}
+
+@media (max-width: 768px) {
+    .global-globe-nav {
+        bottom: 100px;
+        /* Adjust for bottom nav on mobile */
+        left: 20px;
+    }
+
+    .globe-nav-btn {
+        width: 50px;
+        height: 50px;
+    }
+}

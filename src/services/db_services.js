@@ -739,3 +739,34 @@ export const getTotalTasksCountByAssignee = async (userName) => {
     }
 };
 
+
+/**
+ * Fetches all projects from the "projects" collection that have status "Completed".
+ * @returns {Promise<Array>}
+ */
+export const getAllCompletedProjects = async () => {
+    try {
+        const q = query(collection(db, "projects"), where("status", "==", "Completed"));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching all completed projects:", error);
+        return [];
+    }
+};
+
+/**
+ * Updates a project status.
+ */
+export const updateProjectStatus = async (projId, status) => {
+    try {
+        const q = query(collection(db, "projects"), where("proj_id", "==", projId));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            await updateDoc(snap.docs[0].ref, { status });
+        }
+    } catch (error) {
+        console.error("Error updating project status:", error);
+        throw error;
+    }
+};

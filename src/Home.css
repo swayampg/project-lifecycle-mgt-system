@@ -312,3 +312,32 @@
     border-bottom-right-radius: 16px;
     padding: 20px 24px !important;
 }
+
+.bg-success-soft {
+    background-color: #ecfdf5;
+    border: 1px solid #10b981;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.bg-success-soft svg {
+    margin-right: 2px;
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .5;
+    }
+}

@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from './Header';
 import BottomNav from './BottomNav';
-import { Send } from 'lucide-react';
+import { Send, CheckCircle } from 'lucide-react';
 import { auth, db } from './firebaseConfig';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { getUserRoleInProject, addNews } from './services/db_services';
+import { getUserRoleInProject, addNews, updateProjectStatus } from './services/db_services';
 import { getReviewsByProject } from './services/db_services';
 import ReviewTask from './Reviewtask';
+import Swal from 'sweetalert2';
 import './mentorDashboard.css';
 
 const MentorDashboard = () => {
@@ -22,6 +23,8 @@ const MentorDashboard = () => {
     const [selectedReview, setSelectedReview] = useState(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [loadingReviews, setLoadingReviews] = useState(true);
+    const [isCompleting, setIsCompleting] = useState(false);
+    const [projectStatus, setProjectStatus] = useState(null);
 
     useEffect(() => {
         let unsubscribeNews = null;
@@ -59,7 +62,20 @@ const MentorDashboard = () => {
                         setLoadingReviews(false);
                     });
 
-                } else {
+                    // Project status listener
+                    const projectRef = collection(db, "projects");
+                    const projectQuery = query(projectRef, where("proj_id", "==", selectedProjectId));
+                    const unsubscribeProject = onSnapshot(projectQuery, (snapshot) => {
+                        if (!snapshot.empty) {
+                            setProjectStatus(snapshot.docs[0].data().status);
+                        }
+                    });
+
+                    return () => {
+                        if (unsubscribeNews) unsubscribeNews();
+                        if (unsubscribeReviews) unsubscribeReviews();
+                        unsubscribeProject();
+                    };
                     navigate('/home');
                 }
             } else {
@@ -87,6 +103,34 @@ const MentorDashboard = () => {
             setNewsText('');
         } catch (error) {
             console.error("Failed to send news:", error);
+        }
+    };
+
+    const handleCompleteProject = async () => {
+        const selectedProjectId = localStorage.getItem('selectedProjectId');
+        if (!selectedProjectId) return;
+
+        const result = await Swal.fire({
+            title: 'Complete Project?',
+            text: "This will mark the project as completed and move it to the Global Archive. This action is irreversible.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Mark as Completed'
+        });
+
+        if (result.isConfirmed) {
+            setIsCompleting(true);
+            try {
+                await updateProjectStatus(selectedProjectId, 'Completed');
+                Swal.fire('Success!', 'Project has been marked as completed.', 'success');
+            } catch (error) {
+                console.error("Failed to update project status:", error);
+                Swal.fire('Error', 'Failed to update project status.', 'error');
+            } finally {
+                setIsCompleting(false);
+            }
         }
     };
 
@@ -129,7 +173,31 @@ const MentorDashboard = () => {
 
             <main className="dashboard-content">
                 <div className="main-section">
-                    <h1 className="project-title">Mentor Dashboard</h1>
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                        <h1 className="project-title mb-0">Mentor Dashboard</h1>
+                        {projectStatus === 'Completed' ? (
+                            <span className="badge bg-success d-flex align-items-center gap-2 py-2 px-3" style={{ borderRadius: '10px' }}>
+                                <CheckCircle size={18} /> Completed
+                            </span>
+                        ) : (
+                            <button
+                                className="btn btn-success d-flex align-items-center gap-2"
+                                onClick={handleCompleteProject}
+                                disabled={isCompleting}
+                                style={{ borderRadius: '10px', padding: '8px 20px', fontWeight: 600 }}
+                            >
+                                {isCompleting ? (
+                                    <>
+                                        <div className="spinner-border spinner-border-sm" role="status" /> Updating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle size={18} /> Mark as Completed
+                                    </>
+                                )}
+                            </button>
+                        )}
+                    </div>
 
                     {/* ── To Be Reviewed ── */}
                     <div className="task-card">
