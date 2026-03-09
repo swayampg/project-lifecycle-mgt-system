@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { auth, db } from './firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { updateReviewStatus, sendNotification, updateProjectTask } from './services/db_services';
+import Swal from 'sweetalert2';
 import './Reviewtask.css';
+
 
 const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
     const [mentorComment, setMentorComment] = useState(review?.mentorComment || '');
@@ -66,7 +68,12 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
             onReviewComplete();
         } catch (error) {
             console.error('Error submitting review:', error);
-            alert('Something went wrong. Please try again.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Submission Error',
+                text: 'Something went wrong. Please try again.',
+                confirmButtonColor: '#1a4d8c'
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -81,8 +88,8 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
         review.priority === 'High'
             ? '#dc3545'
             : review.priority === 'Medium'
-            ? '#fd7e14'
-            : '#28a745';
+                ? '#fd7e14'
+                : '#28a745';
 
     return (
         <>

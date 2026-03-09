@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Settings, User as UserIcon } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { auth, db } from './firebaseConfig';
+
 import { doc, collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getUserRoleInProject, getAllNews, getUserProjects } from './services/db_services';
@@ -130,7 +132,12 @@ const Header = () => {
         console.log("Opening News Modal. Project ID:", selectedProjectId);
 
         if (!selectedProjectId) {
-            alert("No project selected. Please go to a project dashboard first.");
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Project Selected',
+                text: 'Please go to a project dashboard first.',
+                confirmButtonColor: '#1a4d8c'
+            });
             return;
         }
 

@@ -5,7 +5,9 @@ import BottomNav from './BottomNav';
 import { auth, db } from './firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { submitFeedback } from './services/db_services';
+import Swal from 'sweetalert2';
 import './Feedback.css';
+
 
 const Feedback = () => {
     const [rating, setRating] = useState(0);
@@ -49,7 +51,12 @@ const Feedback = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (rating === 0) {
-            alert("Please provide a rating!");
+            Swal.fire({
+                icon: 'warning',
+                title: 'Rating Required',
+                text: 'Please provide a rating!',
+                confirmButtonColor: '#1a4d8c'
+            });
             return;
         }
 
@@ -73,7 +80,12 @@ const Feedback = () => {
             setDescription('');
         } catch (error) {
             console.error("Error submitting feedback:", error);
-            alert("Failed to submit feedback. Please try again.");
+            Swal.fire({
+                icon: 'error',
+                title: 'Submission Failed',
+                text: 'Failed to submit feedback. Please try again.',
+                confirmButtonColor: '#1a4d8c'
+            });
         } finally {
             setIsSubmitting(false);
         }

@@ -9,6 +9,8 @@ import { respondToInvitation } from './services/db_services';
 import BottomNav from './BottomNav';
 import Header from './Header';
 import { Check, X, Bell } from 'lucide-react';
+import Swal from 'sweetalert2';
+
 
 const Notifications = () => {
     const navigate = useNavigate();
@@ -65,7 +67,14 @@ const Notifications = () => {
         try {
             await respondToInvitation(invite, accept);
             if (accept) {
-                alert(`Joined project: ${invite.projectName}`);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Joined Project!',
+                    text: `Joined project: ${invite.projectName}`,
+                    confirmButtonColor: '#1a4d8c',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             }
         } catch (error) {
             console.error("Error responding to invitation:", error);
