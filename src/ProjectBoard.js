@@ -60,6 +60,25 @@ const ProjectBoard = () => {
         }
     }, [projectId]);
 
+    // --- Deep Link / Auto-open Task from My Tasks ---
+    useEffect(() => {
+        const autoOpenTaskId = localStorage.getItem('autoOpenTaskId');
+        const autoOpenPhaseId = localStorage.getItem('autoOpenPhaseId');
+
+        if (!loading && phases.length > 0 && autoOpenTaskId && autoOpenPhaseId) {
+            const targetPhase = phases.find(p => p.id === autoOpenPhaseId);
+            if (targetPhase) {
+                const targetTask = targetPhase.tasks.find(t => t.id === autoOpenTaskId);
+                if (targetTask) {
+                    viewTaskDetails(targetTask, targetPhase.id);
+                }
+            }
+            // Clear items so it doesn't open again on re-renders/refresh
+            localStorage.removeItem('autoOpenTaskId');
+            localStorage.removeItem('autoOpenPhaseId');
+        }
+    }, [loading, phases]);
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -119,6 +138,7 @@ const ProjectBoard = () => {
 
     const isLeader = userRole === 'Leader' || userRole === 'Project Leader';
     const isMember = !isLeader && userRole !== 'Mentor' && userRole !== null;
+    const isMentor = userRole === 'Mentor';
 
     const handleAddPhase = async () => {
         try {
@@ -800,13 +820,14 @@ const ProjectBoard = () => {
                                     <div className="grid-column">
                                         <div className="form-field">
                                             <label>Title <span className="required-star">*</span></label>
-                                            <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus />
+                                            <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus readOnly={isMentor} />
                                         </div>
                                         <div className="form-field">
                                             <label>Description</label>
                                             <textarea
                                                 value={newTaskDescription}
                                                 onChange={(e) => setNewTaskDescription(e.target.value)}
+                                                readOnly={isMentor}
                                             ></textarea>
                                         </div>
                                     </div>
@@ -819,11 +840,11 @@ const ProjectBoard = () => {
                                         </div>
                                         <div className="form-field">
                                             <label>Deadline</label>
-                                            <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
+                                            <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} readOnly={isMentor} />
                                         </div>
                                         <div className="form-field">
                                             <label>Priority <span className="required-star">*</span></label>
-                                            <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required>
+                                            <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required disabled={isMentor}>
                                                 <option value=""></option>
                                                 <option value="Low">Low</option>
                                                 <option value="Medium">Medium</option>
@@ -836,7 +857,7 @@ const ProjectBoard = () => {
                                     <div className="grid-column">
                                         <div className="form-field">
                                             <label>Assign to</label>
-                                            <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required>
+                                            <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required disabled={isMentor}>
                                                 <option value="">Select Member</option>
                                                 {teamMembers.map(member => (
                                                     <option key={member.uid} value={member.fullName}>
@@ -847,7 +868,7 @@ const ProjectBoard = () => {
                                         </div>
                                         <div className="form-field">
                                             <label>Status <span className="required-star">*</span></label>
-                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
+                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required disabled={isMentor}>
                                                 <option value=""></option>
                                                 <option value="To Do">To Do</option>
                                                 <option value="In Progress">In Progress</option>
@@ -886,13 +907,15 @@ const ProjectBoard = () => {
                                 {/* Attachments */}
                                 <div className="media-upload-section">
                                     <label className="fw-bold d-block mb-2">Attachments</label>
-                                    <div className="d-flex gap-2 mb-2">
-                                        <label className="btn btn-outline-secondary btn-sm mb-0 d-flex align-items-center gap-1" style={{ borderRadius: '8px', padding: '6px 12px' }}>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
-                                            Add Files
-                                            <input type="file" hidden multiple onChange={handleFileChange} />
-                                        </label>
-                                    </div>
+                                    {!isMentor && (
+                                        <div className="d-flex gap-2 mb-2">
+                                            <label className="btn btn-outline-secondary btn-sm mb-0 d-flex align-items-center gap-1" style={{ borderRadius: '8px', padding: '6px 12px' }}>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                                                Add Files
+                                                <input type="file" hidden multiple onChange={handleFileChange} />
+                                            </label>
+                                        </div>
+                                    )}
                                     <div className="media-previews d-flex flex-wrap gap-2">
                                         {newMedia.files && newMedia.files.map((file, i) => (
                                             <div key={i} className="media-thumb">
@@ -906,7 +929,7 @@ const ProjectBoard = () => {
                                                         <span className="file-name-hint">{file.name}</span>
                                                     </div>
                                                 )}
-                                                <div className="remove-media-overlay" onClick={() => removeMedia(i)}><X size={12} /></div>
+                                                {!isMentor && <div className="remove-media-overlay" onClick={() => removeMedia(i)}><X size={12} /></div>}
                                             </div>
                                         ))}
                                     </div>
@@ -936,9 +959,11 @@ const ProjectBoard = () => {
                                     </button>
                                 )}
 
-                                <button type="submit" className="create-task-btn" disabled={isUpdating}>
-                                    {isUpdating ? <><span className="spinner-border-custom"></span> Saving...</> : "Save Changes"}
-                                </button>
+                                {!isMentor && (
+                                    <button type="submit" className="create-task-btn" disabled={isUpdating}>
+                                        {isUpdating ? <><span className="spinner-border-custom"></span> Saving...</> : "Save Changes"}
+                                    </button>
+                                )}
                             </div>
                         </form>
                         <div className="modal-close-icon" onClick={() => setIsViewTaskModalOpen(false)}><X size={20} /></div>

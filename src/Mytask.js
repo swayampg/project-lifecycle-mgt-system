@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Mytask.css';
-import { Calendar } from 'lucide-react'; // Kept Calendar for the list
-import Header from './Header'; // 🔹 Using your new component
-import BottomNav from './BottomNav'; // 🔹 Using your new component
+import { Calendar } from 'lucide-react';
+import Header from './Header';
+import BottomNav from './BottomNav';
 
 import { auth, db } from './firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { getTasksByProjectAndUser, getProjectById } from './services/db_services';
 
 const Mytask = () => {
+    const navigate = useNavigate();
     const [project, setProject] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -51,6 +53,14 @@ const Mytask = () => {
         fetchUserDataAndTasks();
     }, [projectId]);
 
+    const handleTaskClick = (task) => {
+        if (task.id && task.phaseId) {
+            localStorage.setItem('autoOpenTaskId', task.id);
+            localStorage.setItem('autoOpenPhaseId', task.phaseId);
+            navigate('/project-board');
+        }
+    };
+
     return (
         <div className="dashboard-wrapper">
             <Header />
@@ -80,7 +90,12 @@ const Mytask = () => {
                             </div>
                         ) : tasks.length > 0 ? (
                             tasks.map((task) => (
-                                <div key={task.id} className="task-item-card">
+                                <div
+                                    key={task.id}
+                                    className="task-item-card"
+                                    onClick={() => handleTaskClick(task)}
+                                    style={{ cursor: 'pointer' }}
+                                >
                                     <h3 className="task-name">{task.name}</h3>
                                     <div className="task-meta-row">
                                         <div className="due-date-info">
