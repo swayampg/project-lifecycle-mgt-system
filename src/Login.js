@@ -111,7 +111,7 @@ const Login = () => {
         <form onSubmit={handleLogin}>
           <div className="mb-3 text-start">
             <label className="fw-bold small text-secondary">
-              Email Address
+              Email Address <span className="required-star">*</span>
             </label>
             <input
               type="email"
@@ -124,7 +124,7 @@ const Login = () => {
 
           <div className="mb-1 text-start">
             <label className="fw-bold small text-secondary">
-              Password
+              Password <span className="required-star">*</span>
             </label>
             <div className="input-group">
               <input

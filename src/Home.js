@@ -433,7 +433,7 @@ const Home = () => {
                             </div>
                             <div className="modal-body-custom py-4">
                                 <div className="mb-3">
-                                    <label className="form-label">Search Email</label>
+                                    <label className="form-label">Search Email <span className="required-star">*</span></label>
                                     <div className="input-group">
                                         <span className="input-group-text"><Search size={14} /></span>
                                         <input
@@ -486,7 +486,7 @@ const Home = () => {
                                 <div className="detail-section mb-4">
                                     <div className="d-flex justify-content-between align-items-center mb-2">
                                         <label className="form-label mb-0 d-flex align-items-center gap-2">
-                                            <Layers size={16} /> Project Title
+                                            <Layers size={16} /> Project Title <span className="required-star">*</span>
                                         </label>
                                         {(projectForDetails.userRole === 'Project Leader' || projectForDetails.userRole === 'Leader') && !isEditingDetails && (
                                             <button className="btn btn-link btn-sm text-primary p-0" onClick={() => setIsEditingDetails(true)}>

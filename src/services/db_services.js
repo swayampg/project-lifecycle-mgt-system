@@ -415,7 +415,23 @@ export const getTasksByProjectAndUser = async (projId, userName) => {
         const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-        console.error("Error fetching my tasks:", error);
+        return [];
+    }
+};
+
+/**
+ * Fetches all tasks across all projects assigned to a specific user.
+ */
+export const getAllTasksByUser = async (userName) => {
+    try {
+        const q = query(
+            collection(db, "Tasks"),
+            where("assignTo", "==", userName)
+        );
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching all user tasks:", error);
         return [];
     }
 };
@@ -779,12 +795,16 @@ export const getAllCompletedProjects = async () => {
 /**
  * Updates a project status.
  */
-export const updateProjectStatus = async (projId, status) => {
+export const updateProjectStatus = async (projId, status, completedDate = null) => {
     try {
         const q = query(collection(db, "projects"), where("proj_id", "==", projId));
         const snap = await getDocs(q);
         if (!snap.empty) {
-            await updateDoc(snap.docs[0].ref, { status });
+            const updates = { status };
+            if (completedDate) {
+                updates.completedDate = completedDate;
+            }
+            await updateDoc(snap.docs[0].ref, updates);
         }
     } catch (error) {
         console.error("Error updating project status:", error);

@@ -16,9 +16,16 @@ body {
   background: linear-gradient(135deg, #f0f9ff 0%, #cce3ff 100%) no-repeat fixed;
   background-size: cover;
   color: #1e293b;
+  zoom: 90%;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+.required-star {
+  color: #d9534f;
+  font-weight: bold;
+  margin-left: 2px;
 }

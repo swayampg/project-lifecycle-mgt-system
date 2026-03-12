@@ -837,7 +837,7 @@ const ProjectBoard = () => {
                                             </select>
                                         </div>
                                         <div className="form-field">
-                                            <label>Status</label>
+                                            <label>Status <span className="required-star">*</span></label>
                                             <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
                                                 <option value=""></option>
                                                 <option value="To Do">To Do</option>
@@ -901,14 +901,14 @@ const ProjectBoard = () => {
                                     <div className="grid-column">
                                         <div className="form-field">
                                             <label>Title <span className="required-star">*</span></label>
-                                            <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus readOnly={isMentor} />
+                                            <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus readOnly={isMentor || (isMember && currentTask.reviewStatus === 'reviewed')} />
                                         </div>
                                         <div className="form-field">
                                             <label>Description</label>
                                             <textarea
                                                 value={newTaskDescription}
                                                 onChange={(e) => setNewTaskDescription(e.target.value)}
-                                                readOnly={isMentor}
+                                                readOnly={isMentor || (isMember && currentTask.reviewStatus === 'reviewed')}
                                             ></textarea>
                                         </div>
                                     </div>
@@ -921,11 +921,11 @@ const ProjectBoard = () => {
                                         </div>
                                         <div className="form-field">
                                             <label>Deadline</label>
-                                            <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} readOnly={isMentor} />
+                                            <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} readOnly={isMentor || isMember || (isMember && currentTask.reviewStatus === 'reviewed')} />
                                         </div>
                                         <div className="form-field">
                                             <label>Priority <span className="required-star">*</span></label>
-                                            <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required disabled={isMentor}>
+                                            <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)} required disabled={isMentor || isMember || (isMember && currentTask.reviewStatus === 'reviewed')}>
                                                 <option value=""></option>
                                                 <option value="Low">Low</option>
                                                 <option value="Medium">Medium</option>
@@ -938,7 +938,7 @@ const ProjectBoard = () => {
                                     <div className="grid-column">
                                         <div className="form-field">
                                             <label>Assign to</label>
-                                            <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required disabled={isMentor}>
+                                            <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required disabled={isMentor || (isMember && currentTask.reviewStatus === 'reviewed')}>
                                                 <option value="">Select Member</option>
                                                 {teamMembers.map(member => (
                                                     <option key={member.uid} value={member.fullName}>
@@ -949,7 +949,7 @@ const ProjectBoard = () => {
                                         </div>
                                         <div className="form-field">
                                             <label>Status <span className="required-star">*</span></label>
-                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required disabled={isMentor}>
+                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required disabled={isMentor || (isMember && currentTask.reviewStatus === 'reviewed')}>
                                                 <option value=""></option>
                                                 <option value="To Do">To Do</option>
                                                 <option value="In Progress">In Progress</option>
@@ -988,7 +988,7 @@ const ProjectBoard = () => {
                                 {/* Attachments */}
                                 <div className="media-upload-section">
                                     <label className="fw-bold d-block mb-2">Attachments</label>
-                                    {!isMentor && (
+                                    {!isMentor && !(isMember && currentTask.reviewStatus === 'reviewed') && (
                                         <div className="d-flex gap-2 mb-2">
                                             <label className="btn btn-outline-secondary btn-sm mb-0 d-flex align-items-center gap-1" style={{ borderRadius: '8px', padding: '6px 12px' }}>
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
@@ -1040,7 +1040,7 @@ const ProjectBoard = () => {
                                     </button>
                                 )}
 
-                                {!isMentor && (
+                                {!isMentor && !(isMember && currentTask.reviewStatus === 'reviewed') && (
                                     <button type="submit" className="create-task-btn" disabled={isUpdating}>
                                         {isUpdating ? <><span className="spinner-border-custom"></span> Saving...</> : "Save Changes"}
                                     </button>

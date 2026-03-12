@@ -152,7 +152,7 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                         {/* Row 1: Title | Status | Priority */}
                         <div className="review-top-row">
                             <div className="review-field">
-                                <label>Title <span className="req">*</span></label>
+                                <label>Title <span className="required-star">*</span></label>
                                 <input
                                     type="text"
                                     className="form-control"
@@ -161,7 +161,7 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                                 />
                             </div>
                             <div className="review-field">
-                                <label>Status <span className="req">*</span></label>
+                                <label>Status <span className="required-star">*</span></label>
                                 <input
                                     type="text"
                                     className="form-control"
@@ -170,7 +170,7 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                                 />
                             </div>
                             <div className="review-field">
-                                <label>Priority <span className="req">*</span></label>
+                                <label>Priority <span className="required-star">*</span></label>
                                 <input
                                     type="text"
                                     className="form-control"

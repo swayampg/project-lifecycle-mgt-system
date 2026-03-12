@@ -129,7 +129,7 @@ const Feedback = () => {
                         <div className="feedback-grid">
                             {/* Star Rating */}
                             <div className="rating-section">
-                                <label>Give us rating</label>
+                                <label>Give us rating <span className="required-star">*</span></label>
                                 <div className="stars-container">
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <Star
@@ -167,7 +167,7 @@ const Feedback = () => {
 
                         {/* Description */}
                         <div className="description-section">
-                            <label>Description of the issue</label>
+                            <label>Description of the issue <span className="required-star">*</span></label>
                             <textarea
                                 className="description-textarea"
                                 value={description}
@@ -189,7 +189,7 @@ const Feedback = () => {
                             </div>
 
                             <div className="footer-field">
-                                <label>Your Name</label>
+                                <label>Your Name <span className="required-star">*</span></label>
                                 <input
                                     type="text"
                                     className="footer-input"
@@ -200,7 +200,7 @@ const Feedback = () => {
                             </div>
 
                             <div className="footer-field">
-                                <label>Email</label>
+                                <label>Email <span className="required-star">*</span></label>
                                 <input
                                     type="email"
                                     className="footer-input"

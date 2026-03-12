@@ -43,7 +43,7 @@ const ResetPassword = () => {
 
         <form onSubmit={handleReset}>
           <div className="mb-4 text-start">
-            <label className="fw-bold small text-secondary">Email Address</label>
+            <label className="fw-bold small text-secondary">Email Address <span className="required-star">*</span></label>
             <input
               type="email"
               className="form-control bg-light border-0"

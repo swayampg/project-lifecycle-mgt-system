@@ -236,7 +236,7 @@ const Profile = () => {
 
                             {/* ── Full Name: alphabets and spaces only ── */}
                             <div className="mb-4">
-                                <label className="form-label fw-bold small text-secondary">FULL NAME</label>
+                                <label className="form-label fw-bold small text-secondary">FULL NAME <span className="required-star">*</span></label>
                                 <input
                                     type="text"
                                     className="form-control"

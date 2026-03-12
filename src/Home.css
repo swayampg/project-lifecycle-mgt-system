@@ -37,8 +37,8 @@
     display: flex !important;
     justify-content: flex-start !important;
     align-items: center !important;
-    padding: 16px 20px !important;
-    min-height: 85px;
+    padding: 12px 18px !important;
+    min-height: 75px;
 }
 
 .stat-card:hover {
@@ -46,8 +46,8 @@
 }
 
 .icon-box {
-    width: 48px;
-    height: 48px;
+    width: 42px;
+    height: 42px;
     flex-shrink: 0;
     border-radius: 12px;
     display: flex;
@@ -59,7 +59,7 @@
 /* Main Content Area */
 .project-area {
     background: white;
-    padding: 25px;
+    padding: 20px;
     border-radius: 20px;
     min-height: 300px;
     border: 1px solid #e2e8f0;
@@ -124,7 +124,7 @@
 
 
 .project-name {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: #1a4d8c;
     margin-bottom: 2px;

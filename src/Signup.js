@@ -99,7 +99,7 @@ const Signup = () => {
                 <h1 className="welcome-text">Join Us !</h1>
                 <form onSubmit={handleSignup}>
                     <div className="mb-3 text-start">
-                        <label className="fw-bold small text-secondary">Full Name</label>
+                        <label className="fw-bold small text-secondary">Full Name <span className="required-star">*</span></label>
                         <input
                             type="text"
                             className="form-control bg-light border-0"
@@ -109,7 +109,7 @@ const Signup = () => {
                         />
                     </div>
                     <div className="mb-3 text-start">
-                        <label className="fw-bold small text-secondary">Email Address</label>
+                        <label className="fw-bold small text-secondary">Email Address <span className="required-star">*</span></label>
                         <input
                             type="email"
                             className="form-control bg-light border-0"
@@ -120,7 +120,7 @@ const Signup = () => {
                     </div>
 
                     <div className="mb-3 text-start">
-                        <label className="fw-bold small text-secondary">Password</label>
+                        <label className="fw-bold small text-secondary">Password <span className="required-star">*</span></label>
                         <div className="input-group">
                             <input
                                 type={showPassword ? "text" : "password"}

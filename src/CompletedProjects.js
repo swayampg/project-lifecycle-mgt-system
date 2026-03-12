@@ -15,8 +15,12 @@ const CompletedProjects = () => {
             setLoading(true);
             try {
                 const projects = await getAllCompletedProjects();
-                // Sort by end date descending (newest completed first)
-                const sortedProjects = projects.sort((a, b) => new Date(b.endDate) - new Date(a.endDate));
+                // Sort by completion date descending (newest completed first)
+                const sortedProjects = projects.sort((a, b) => {
+                    const dateA = new Date(a.completedDate || a.endDate);
+                    const dateB = new Date(b.completedDate || b.endDate);
+                    return dateB - dateA;
+                });
                 setCompletedProjects(sortedProjects);
             } catch (error) {
                 console.error("Error fetching completed projects:", error);
@@ -74,7 +78,7 @@ const CompletedProjects = () => {
                                     <div className="stat-item ms-auto">
                                         <span className="stat-label">Completed On</span>
                                         <span className="stat-value d-flex align-items-center gap-1">
-                                            <Calendar size={14} /> {project.endDate}
+                                            <Calendar size={14} /> {project.completedDate || project.endDate}
                                         </span>
                                     </div>
                                 </div>

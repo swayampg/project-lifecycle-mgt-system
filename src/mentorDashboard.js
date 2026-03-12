@@ -4,7 +4,7 @@ import Header from './Header';
 import BottomNav from './BottomNav';
 import { Send, CheckCircle } from 'lucide-react';
 import { auth, db } from './firebaseConfig';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, getDocs } from 'firebase/firestore';
 import { getUserRoleInProject, addNews, updateProjectStatus } from './services/db_services';
 import { getReviewsByProject } from './services/db_services';
 import ReviewTask from './Reviewtask';
@@ -25,10 +25,13 @@ const MentorDashboard = () => {
     const [loadingReviews, setLoadingReviews] = useState(true);
     const [isCompleting, setIsCompleting] = useState(false);
     const [projectStatus, setProjectStatus] = useState(null);
+    const [progress, setProgress] = useState(0);
+    const [projectData, setProjectData] = useState(null);
 
     useEffect(() => {
         let unsubscribeNews = null;
         let unsubscribeReviews = null;
+        let unsubscribeProject = null; // Declare unsubscribeProject here
 
         const checkAccess = async () => {
             const user = auth.currentUser;
@@ -62,32 +65,57 @@ const MentorDashboard = () => {
                         setLoadingReviews(false);
                     });
 
-                    // Project status listener
+                    // Project status and progress listener
                     const projectRef = collection(db, "projects");
                     const projectQuery = query(projectRef, where("proj_id", "==", selectedProjectId));
-                    const unsubscribeProject = onSnapshot(projectQuery, (snapshot) => {
+                    unsubscribeProject = onSnapshot(projectQuery, async (snapshot) => {
                         if (!snapshot.empty) {
-                            setProjectStatus(snapshot.docs[0].data().status);
+                            const projData = snapshot.docs[0].data();
+                            setProjectStatus(projData.status);
+                            setProjectData(projData);
+
+                            // Calculate progress
+                            const phasesQuery = query(collection(db, "project-phases"), where("proj_id", "==", selectedProjectId));
+                            const phasesSnapshot = await getDocs(phasesQuery);
+                            const phaseIds = phasesSnapshot.docs.map(doc => doc.id);
+
+                            if (phaseIds.length > 0) {
+                                const tasksQuery = query(collection(db, "Tasks"), where("phaseId", "in", phaseIds));
+                                const tasksSnapshot = await getDocs(tasksQuery);
+                                const allTasks = tasksSnapshot.docs.map(doc => doc.data());
+                                if (allTasks.length > 0) {
+                                    const completedCount = allTasks.filter(t => t.completed).length;
+                                    setProgress(Math.round((completedCount / allTasks.length) * 100));
+                                } else {
+                                    setProgress(0);
+                                }
+                            } else {
+                                setProgress(0);
+                            }
                         }
                     });
 
+                    // Cleanup function for this block
                     return () => {
                         if (unsubscribeNews) unsubscribeNews();
                         if (unsubscribeReviews) unsubscribeReviews();
-                        unsubscribeProject();
+                        if (unsubscribeProject) unsubscribeProject();
                     };
-                    navigate('/home');
+                } else {
+                    navigate('/home'); // If not mentor, navigate away
                 }
             } else {
-                navigate('/');
+                navigate('/'); // If no user or project, navigate to login
             }
         };
 
         checkAccess();
 
+        // Global cleanup for useEffect
         return () => {
             if (unsubscribeNews) unsubscribeNews();
             if (unsubscribeReviews) unsubscribeReviews();
+            if (unsubscribeProject) unsubscribeProject();
         };
     }, [navigate]);
 
@@ -123,7 +151,12 @@ const MentorDashboard = () => {
         if (result.isConfirmed) {
             setIsCompleting(true);
             try {
-                await updateProjectStatus(selectedProjectId, 'Completed');
+                const completedDate = new Date().toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                await updateProjectStatus(selectedProjectId, 'Completed', completedDate);
                 Swal.fire('Success!', 'Project has been marked as completed.', 'success');
             } catch (error) {
                 console.error("Failed to update project status:", error);
@@ -173,8 +206,32 @@ const MentorDashboard = () => {
 
             <main className="dashboard-content">
                 <div className="main-section">
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h1 className="project-title mb-0">Mentor Dashboard</h1>
+                    <div className="d-flex justify-content-between align-items-center mb-4 p-4 bg-white shadow-sm" style={{ borderRadius: '16px' }}>
+                        <div className="project-info-header">
+                            <h1 className="project-title mb-1" style={{ fontSize: '1.8rem', fontWeight: '700', color: '#1a4d8c' }}>
+                                {projectData?.Name || 'Mentor Dashboard'}
+                            </h1>
+                            <div className="project-header-meta d-flex gap-3 align-items-center flex-wrap">
+                                {projectData?.category && (
+                                    <span className="badge bg-primary-soft text-primary px-3 py-1" style={{ fontSize: '0.75rem', background: '#e0e7ff', borderRadius: '50px' }}>
+                                        {projectData.category}
+                                    </span>
+                                )}
+                                {projectData?.department && (
+                                    <span className="badge bg-warning-soft text-warning px-3 py-1" style={{ fontSize: '0.75rem', background: '#fef3c7', borderRadius: '50px', color: '#92400e' }}>
+                                        {projectData.department}
+                                    </span>
+                                )}
+                                <span className="leader-info" style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                                    Leader: <strong>{projectData?.leaderName || projectData?.projectLeader || 'N/A'}</strong>
+                                </span>
+                                <div className="date-info d-flex gap-2" style={{ fontSize: '0.85rem', color: '#64748b', borderLeft: '1px solid #e2e8f0', paddingLeft: '15px' }}>
+                                    <span>{projectData?.startDate}</span>
+                                    <span>-</span>
+                                    <span>{projectData?.endDate}</span>
+                                </div>
+                            </div>
+                        </div>
                         {projectStatus === 'Completed' ? (
                             <span className="badge bg-success d-flex align-items-center gap-2 py-2 px-3" style={{ borderRadius: '10px' }}>
                                 <CheckCircle size={18} /> Completed
@@ -183,8 +240,9 @@ const MentorDashboard = () => {
                             <button
                                 className="btn btn-success d-flex align-items-center gap-2"
                                 onClick={handleCompleteProject}
-                                disabled={isCompleting}
-                                style={{ borderRadius: '10px', padding: '8px 20px', fontWeight: 600 }}
+                                disabled={isCompleting || progress < 100}
+                                style={{ borderRadius: '10px', padding: '8px 20px', fontWeight: 600, opacity: (isCompleting || progress < 100) ? 0.6 : 1 }}
+                                title={progress < 100 ? `Project progress must be 100% to complete (Current: ${progress}%)` : ""}
                             >
                                 {isCompleting ? (
                                     <>
