@@ -4,7 +4,7 @@ import { Plus, Minus, X, Edit2, Check, Layout, Send, ChevronLeft, ChevronRight }
 import { useParams } from 'react-router-dom';
 import { auth, db } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import {
     getProjectPhases,
     addProjectPhase,
@@ -16,7 +16,8 @@ import {
     addProjectTask,
     getTasksByPhase,
     updateProjectTask,
-    deleteProjectTask
+    deleteProjectTask,
+    uploadFile
 } from './services/db_services';
 import { sendTaskForReview } from './services/db_services';
 import BottomNav from './BottomNav';
@@ -51,6 +52,7 @@ const ProjectBoard = () => {
     const [newStatus, setNewStatus] = useState('');
     const [newPriority, setNewPriority] = useState('');
     const [newMedia, setNewMedia] = useState({ files: [] });
+    const [pendingFiles, setPendingFiles] = useState([]);
 
     useEffect(() => {
         if (projectId) {
@@ -282,29 +284,35 @@ const ProjectBoard = () => {
         setNewStatus('In Progress');
         setNewPriority('Medium');
         setNewMedia({ files: [] });
+        setPendingFiles([]);
         setIsAddTaskModalOpen(true);
     };
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
+        setPendingFiles(prev => [...prev, ...files]);
+
         files.forEach(file => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
-                setNewMedia(prev => ({
-                    ...prev,
-                    files: [...(prev.files || []), {
-                        url: reader.result,
-                        name: file.name,
-                        type: fileType
-                    }]
-                }));
-            };
-            reader.readAsDataURL(file);
+            const url = URL.createObjectURL(file);
+            const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
+            setNewMedia(prev => ({
+                ...prev,
+                files: [...(prev.files || []), {
+                    url: url,
+                    name: file.name,
+                    type: fileType,
+                    isNew: true
+                }]
+            }));
         });
     };
 
-    const removeMedia = (index) => {
+    const removeMedia = (index, isNew) => {
+        if (isNew) {
+            // Remove from pending files
+            const fileName = newMedia.files[index].name;
+            setPendingFiles(prev => prev.filter(f => f.name !== fileName));
+        }
         setNewMedia(prev => ({
             ...prev,
             files: prev.files.filter((_, i) => i !== index)
@@ -315,22 +323,31 @@ const ProjectBoard = () => {
         e.preventDefault();
         if (!newTaskName.trim()) return;
 
-        setIsUpdating(true);
-        const taskData = {
-            name: newTaskName,
-            description: newTaskDescription,
-            assignBy: newAssignBy,
-            assignTo: newAssignTo,
-            deadline: newDeadline,
-            status: newStatus,
-            priority: newPriority,
-            media: newMedia,
-            phaseId: currentPhaseId,
-            completed: false,
-            reviewStatus: null
-        };
-
         try {
+            // Upload pending files to Firebase Storage
+            const uploadedFiles = await Promise.all(pendingFiles.map(async (file) => {
+                const path = `tasks/${projectId}/${Date.now()}_${file.name}`;
+                const url = await uploadFile(file, path);
+                const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
+                return { url, name: file.name, type: fileType };
+            }));
+
+            const finalMedia = { files: uploadedFiles };
+
+            const taskData = {
+                name: newTaskName,
+                description: newTaskDescription,
+                assignBy: newAssignBy,
+                assignTo: newAssignTo,
+                deadline: newDeadline,
+                status: newStatus,
+                priority: newPriority,
+                media: finalMedia,
+                phaseId: currentPhaseId,
+                completed: false,
+                reviewStatus: null
+            };
+
             const taskId = await addProjectTask(taskData);
             const newTask = { id: taskId, ...taskData };
             setPhases(prev => prev.map(p => {
@@ -340,6 +357,14 @@ const ProjectBoard = () => {
                 return p;
             }));
             setIsAddTaskModalOpen(false);
+            setPendingFiles([]);
+            Swal.fire({
+                title: 'Success!',
+                text: 'Task added successfully!',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
         } catch (error) {
             console.error("Error adding task:", error);
             Swal.fire({
@@ -414,6 +439,31 @@ const ProjectBoard = () => {
         };
 
         try {
+            // Upload pending files if any
+            let finalMedia = newMedia;
+            if (pendingFiles.length > 0) {
+                const uploadedFiles = await Promise.all(pendingFiles.map(async (file) => {
+                    const path = `tasks/${projectId}/${Date.now()}_${file.name}`;
+                    const url = await uploadFile(file, path);
+                    const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
+                    return { url, name: file.name, type: fileType };
+                }));
+                // Combine existing (non-new) files with newly uploaded ones
+                const existingFiles = newMedia.files.filter(f => !f.isNew);
+                finalMedia = { files: [...existingFiles, ...uploadedFiles] };
+            }
+
+            const updates = {
+                name: newTaskName,
+                description: newTaskDescription,
+                assignBy: newAssignBy,
+                assignTo: newAssignTo,
+                deadline: newDeadline,
+                status: newStatus,
+                priority: newPriority,
+                media: finalMedia
+            };
+
             await updateProjectTask(currentTask.id, updates);
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {
@@ -425,6 +475,14 @@ const ProjectBoard = () => {
                 return p;
             }));
             setIsViewTaskModalOpen(false);
+            setPendingFiles([]);
+            Swal.fire({
+                title: 'Updated!',
+                text: 'Task updated successfully!',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
         } catch (error) {
             console.error("Error updating task:", error);
             Swal.fire({
@@ -458,13 +516,35 @@ const ProjectBoard = () => {
         };
 
         try {
-            await updateProjectTask(currentTask.id, {
+            // Upload pending files if any
+            let finalMedia = newMedia;
+            if (pendingFiles.length > 0) {
+                const uploadedFiles = await Promise.all(pendingFiles.map(async (file) => {
+                    const path = `tasks/${projectId}/${Date.now()}_${file.name}`;
+                    const url = await uploadFile(file, path);
+                    const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
+                    return { url, name: file.name, type: fileType };
+                }));
+                const existingFiles = newMedia.files.filter(f => !f.isNew);
+                finalMedia = { files: [...existingFiles, ...uploadedFiles] };
+            }
+
+            const updatedTask = {
+                ...currentTask,
                 name: newTaskName,
                 description: newTaskDescription,
+                assignBy: newAssignBy,
+                assignTo: newAssignTo,
+                deadline: newDeadline,
                 status: newStatus,
                 priority: newPriority,
-                media: newMedia,
+                media: finalMedia,
                 reviewStatus: 'pending'
+            };
+
+            await updateProjectTask(currentTask.id, {
+                ...updatedTask,
+                updatedAt: serverTimestamp()
             });
 
             await sendTaskForReview(updatedTask, projectId);
@@ -475,7 +555,7 @@ const ProjectBoard = () => {
                         ...p,
                         tasks: p.tasks.map(t =>
                             t.id === currentTask.id
-                                ? { ...t, ...updatedTask, reviewStatus: 'pending' }
+                                ? { ...t, ...updatedTask }
                                 : t
                         )
                     };
@@ -484,6 +564,7 @@ const ProjectBoard = () => {
             }));
 
             setIsViewTaskModalOpen(false);
+            setPendingFiles([]);
             Swal.fire({
                 title: 'Sent!',
                 text: 'Task sent to mentor for validation!',

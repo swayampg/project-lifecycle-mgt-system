@@ -16,6 +16,7 @@ import Reviewtask from './Reviewtask';
 import Feedback from './Feedback';
 import CompletedProjects from './CompletedProjects';
 import GlobalGlobeNav from './GlobalGlobeNav';
+import ProtectedRoute from './components/ProtectedRoute';
 
 
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -27,18 +28,20 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/CreateProject" element={<CreateProject />} />
-        <Route path="/project-board" element={<ProjectBoard />} />
-        <Route path="/Progress" element={<Progress />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/Mytask" element={<Mytask />} />
-        <Route path="/profile-overview" element={<ProfileOverview />} />
-        <Route path="/Notifications" element={<Notifications />} />
-        <Route path="/mentorDashboard" element={<MentorDashboard />} />
-        <Route path="/Reviewtask" element={<Reviewtask />} />
-        <Route path="/feedback" element={<Feedback />} />
-        <Route path="/completed-projects" element={<CompletedProjects />} />
+
+        {/* Protected Routes */}
+        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+        <Route path="/CreateProject" element={<ProtectedRoute><CreateProject /></ProtectedRoute>} />
+        <Route path="/project-board" element={<ProtectedRoute><ProjectBoard /></ProtectedRoute>} />
+        <Route path="/Progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/Mytask" element={<ProtectedRoute><Mytask /></ProtectedRoute>} />
+        <Route path="/profile-overview" element={<ProtectedRoute><ProfileOverview /></ProtectedRoute>} />
+        <Route path="/Notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+        <Route path="/mentorDashboard" element={<ProtectedRoute><MentorDashboard /></ProtectedRoute>} />
+        <Route path="/Reviewtask" element={<ProtectedRoute><Reviewtask /></ProtectedRoute>} />
+        <Route path="/feedback" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />
+        <Route path="/completed-projects" element={<ProtectedRoute><CompletedProjects /></ProtectedRoute>} />
 
       </Routes>
       <GlobalGlobeNav />

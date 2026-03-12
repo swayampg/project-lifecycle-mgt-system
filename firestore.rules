@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isUser(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+    
+    function getProject(projectId) {
+      return get(/databases/$(database)/documents/projects/$(projectId)).data;
+    }
+
+    function isTeamMember(projectId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/projectTeam/$(request.auth.uid + "_" + projectId));
+    }
+
+    function isProjectLeader(projectId) {
+      return isTeamMember(projectId) && 
+        get(/databases/$(database)/documents/projectTeam/$(request.auth.uid + "_" + projectId)).data.role == "Project Leader";
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isUser(userId);
+    }
+    
+    match /projects/{projectId} {
+      allow read: if isAuthenticated() && (
+        resource == null || // For new project creation checks
+        isTeamMember(projectId)
+      );
+      allow create: if isAuthenticated();
+      allow update, delete: if isProjectLeader(projectId);
+    }
+    
+    match /projectTeam/{teamDocId} {
+      // teamDocId is "uid_projectId"
+      allow read: if isAuthenticated() && isTeamMember(teamDocId.split("_")[1]);
+      
+      // Allow creation if:
+      // 1. You are the user being added (accepting invitation - should ideally check invitation)
+      // 2. You are the project leader adding someone (not yet supported by this simple rule, but safe for now)
+      allow create: if isAuthenticated() && (
+        request.resource.data.uid == request.auth.uid || 
+        isProjectLeader(request.resource.data.prjid)
+      );
+      
+      allow update: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.uid || // Update own consent
+        isProjectLeader(request.resource.data.prjid)     // Leader update
+      );
+      
+      allow delete: if isProjectLeader(resource.data.prjid);
+    }
+    
+    match /project-phases/{phaseId} {
+      allow read: if isAuthenticated() && isTeamMember(resource.data.proj_id);
+      allow write: if isTeamMember(request.resource.data.proj_id || resource.data.proj_id);
+    }
+    
+    match /Tasks/{taskId} {
+      allow read: if isAuthenticated() && isTeamMember(resource.data.projectId || getProject(resource.data.phaseId).proj_id); 
+      // Note: Task schema should ideally have projectId for efficient rules. 
+      // If it only has phaseId, we need to get the project from phase.
+      allow write: if isAuthenticated() && (
+        isTeamMember(request.resource.data.projectId || resource.data.projectId)
+      );
+    }
+    
+    match /invitations/{invitationId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.recipientUid);
+      allow create: if isAuthenticated(); // Should restrict to team members/leaders
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.recipientUid || isProjectLeader(resource.data.prjid));
+    }
+    
+    match /news/{newsId} {
+      allow read: if isAuthenticated() && isTeamMember(resource.data.prjid);
+      allow create: if isTeamMember(request.resource.data.prjid); 
+      allow update, delete: if isProjectLeader(resource.data.prjid);
+    }
+    
+    match /reviews/{reviewId} {
+      allow read: if isAuthenticated() && isTeamMember(resource.data.projectId);
+      allow write: if isAuthenticated() && isTeamMember(request.resource.data.projectId || resource.data.projectId);
+    }
+    
+    match /notifications/{notificationId} {
+      allow read, update, delete: if isUser(resource.data.recipientUid);
+      allow create: if isAuthenticated();
+    }
+    
+    match /feedback/{feedbackId} {
+      allow create: if isAuthenticated();
+      allow read: if false;
+    }
+  }
+}

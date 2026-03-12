@@ -1,5 +1,24 @@
-import { db } from '../firebaseConfig';
-import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, limit, serverTimestamp } from 'firebase/firestore';
+import { db, storage } from '../firebaseConfig';
+import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, limit, serverTimestamp, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+/**
+ * Uploads a file to Firebase Storage.
+ * @param {File} file 
+ * @param {string} path 
+ * @returns {Promise<string>} Download URL
+ */
+export const uploadFile = async (file, path) => {
+    try {
+        const storageRef = ref(storage, path);
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        return downloadURL;
+    } catch (error) {
+        console.error("Error uploading file:", error);
+        throw error;
+    }
+};
 
 /**
  * Finds a user by their email address.
@@ -35,7 +54,7 @@ export const sendInvitation = async (projectData, recipient, role) => {
             senderName: projectData.projectLeader,
             role: role,
             status: "pending",
-            createdAt: new Date()
+            createdAt: serverTimestamp()
         });
     } catch (error) {
         console.error("Error sending invitation:", error);
@@ -68,12 +87,13 @@ export const getInvitationsForUser = async (userUid) => {
 export const respondToInvitation = async (invitation, accept) => {
     try {
         if (accept) {
-            const team_id = `team_${Date.now()}`;
-            await addDoc(collection(db, "projectTeam"), {
-                id: team_id,
+            const teamMemberId = `${invitation.recipientUid}_${invitation.prjid}`;
+            await setDoc(doc(db, "projectTeam", teamMemberId), {
+                id: teamMemberId,
                 prjid: invitation.prjid,
                 uid: invitation.recipientUid,
-                role: invitation.role
+                role: invitation.role,
+                consentToDelete: false
             });
         }
         await deleteDoc(doc(db, "invitations", invitation.id));
@@ -142,10 +162,8 @@ export const getUserProjects = async (userUid) => {
  */
 export const createProjectWithTeam = async (formData, userUid, creatorRole = "Project Leader") => {
     try {
-        const proj_id = Date.now().toString();
-
-        await addDoc(collection(db, "projects"), {
-            proj_id: proj_id,
+        const projectRef = await addDoc(collection(db, "projects"), {
+            proj_id: "", // Will update after creation
             Name: formData.projectTitle,
             projectLeader: formData.projectLeader,
             startDate: formData.startDate,
@@ -153,15 +171,20 @@ export const createProjectWithTeam = async (formData, userUid, creatorRole = "Pr
             description: formData.description,
             category: formData.category,
             department: formData.department,
-            createdAt: new Date()
+            createdAt: serverTimestamp(),
+            status: "active",
+            deletionStatus: null
         });
+        const proj_id = projectRef.id;
+        await updateDoc(projectRef, { proj_id: proj_id });
 
-        const team_id = `team_${Date.now()}`;
-        await addDoc(collection(db, "projectTeam"), {
-            id: team_id,
+        const teamMemberId = `${userUid}_${proj_id}`;
+        await setDoc(doc(db, "projectTeam", teamMemberId), {
+            id: teamMemberId,
             prjid: proj_id,
             uid: userUid,
-            role: creatorRole
+            role: creatorRole,
+            consentToDelete: false
         });
 
         const defaultPhases = [
@@ -174,7 +197,6 @@ export const createProjectWithTeam = async (formData, userUid, creatorRole = "Pr
 
         for (let i = 0; i < defaultPhases.length; i++) {
             await addDoc(collection(db, "project-phases"), {
-                phaseId: `phase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 phaseName: defaultPhases[i],
                 proj_id: proj_id,
                 projectName: formData.projectTitle,
@@ -226,7 +248,7 @@ export const addProjectTask = async (taskData) => {
     try {
         const docRef = await addDoc(collection(db, "Tasks"), {
             ...taskData,
-            createdAt: new Date()
+            createdAt: serverTimestamp()
         });
         return docRef.id;
     } catch (error) {
@@ -303,7 +325,6 @@ export const addProjectPhase = async (projId, phaseName, projectName = "") => {
         const nextOrder = currentPhases.length;
 
         const phaseData = {
-            phaseId: `phase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             phaseName: phaseName,
             proj_id: projId,
             projectName: projectName,
