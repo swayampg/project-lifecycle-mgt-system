@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, db, googleProvider } from './firebaseConfig';
+import { auth, db, googleProvider, appleProvider } from './firebaseConfig';
 import { signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2'; // 1. Import SweetAlert2
@@ -100,6 +100,41 @@ const Login = () => {
     }
   };
 
+  const handleAppleLogin = async () => {
+    setLoading(true);
+    try {
+      const userCredential = await signInWithPopup(auth, appleProvider);
+      const user = userCredential.user;
+
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        fullName: user.displayName || "User",
+        email: user.email,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+
+      Swal.fire({
+        title: 'Success!',
+        text: 'Login Successful!',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      navigate('/home');
+    } catch (error) {
+      Swal.fire({
+        title: 'Login Failed',
+        text: error.message,
+        icon: 'error',
+        confirmButtonColor: '#1a4d8c',
+        confirmButtonText: 'Try Again'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="auth-container">
       <div className="shape-left"></div>
@@ -162,6 +197,17 @@ const Login = () => {
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '20px', marginRight: '10px' }} />
             Sign in with Google
+          </button>
+
+          <button
+            type="button"
+            disabled={loading}
+            className="btn w-100 fw-bold text-dark mt-2 border d-flex align-items-center justify-content-center"
+            style={{ backgroundColor: '#fff', padding: '12px' }}
+            onClick={handleAppleLogin}
+          >
+            <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" style={{ width: '20px', marginRight: '10px' }} />
+            Sign in with Apple
           </button>
 
           <div className="text-center mt-3">
