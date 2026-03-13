@@ -20,13 +20,14 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/projectTeam/$(request.auth.uid + "_" + projectId));
     }
 
-    function isProjectLeader(projectId) {
-      return isTeamMember(projectId) && 
-        get(/databases/$(database)/documents/projectTeam/$(request.auth.uid + "_" + projectId)).data.role == "Project Leader";
+    function isAuthorized(projectId) {
+      if (!isAuthenticated()) return false;
+      let teamDocPath = /databases/$(database)/documents/projectTeam/$(request.auth.uid + "_" + projectId);
+      return exists(teamDocPath) && (get(teamDocPath).data.role == "Project Leader" || get(teamDocPath).data.role == "Mentor");
     }
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isUser(userId);
       allow write: if isUser(userId);
     }
     
@@ -36,7 +37,7 @@ service cloud.firestore {
         isTeamMember(projectId)
       );
       allow create: if isAuthenticated();
-      allow update, delete: if isProjectLeader(projectId);
+      allow update, delete: if isAuthorized(projectId);
     }
     
     match /projectTeam/{teamDocId} {
@@ -48,15 +49,15 @@ service cloud.firestore {
       // 2. You are the project leader adding someone (not yet supported by this simple rule, but safe for now)
       allow create: if isAuthenticated() && (
         request.resource.data.uid == request.auth.uid || 
-        isProjectLeader(request.resource.data.prjid)
+        isAuthorized(request.resource.data.prjid)
       );
       
       allow update: if isAuthenticated() && (
         request.auth.uid == request.resource.data.uid || // Update own consent
-        isProjectLeader(request.resource.data.prjid)     // Leader update
-      );
+        isAuthorized(request.resource.data.prjid)     // Leader/Mentor update
+    );
       
-      allow delete: if isProjectLeader(resource.data.prjid);
+      allow delete: if isAuthorized(resource.data.prjid);
     }
     
     match /project-phases/{phaseId} {
@@ -65,9 +66,7 @@ service cloud.firestore {
     }
     
     match /Tasks/{taskId} {
-      allow read: if isAuthenticated() && isTeamMember(resource.data.projectId || getProject(resource.data.phaseId).proj_id); 
-      // Note: Task schema should ideally have projectId for efficient rules. 
-      // If it only has phaseId, we need to get the project from phase.
+      allow read: if isAuthenticated() && isTeamMember(resource.data.projectId); 
       allow write: if isAuthenticated() && (
         isTeamMember(request.resource.data.projectId || resource.data.projectId)
       );
@@ -75,14 +74,14 @@ service cloud.firestore {
     
     match /invitations/{invitationId} {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.recipientUid);
-      allow create: if isAuthenticated(); // Should restrict to team members/leaders
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.recipientUid || isProjectLeader(resource.data.prjid));
+      allow create: if isAuthenticated() && isAuthorized(request.resource.data.prjid); 
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.recipientUid || isAuthorized(resource.data.prjid));
     }
     
     match /news/{newsId} {
       allow read: if isAuthenticated() && isTeamMember(resource.data.prjid);
       allow create: if isTeamMember(request.resource.data.prjid); 
-      allow update, delete: if isProjectLeader(resource.data.prjid);
+      allow update, delete: if isAuthorized(request.resource.data.prjid || resource.data.prjid);
     }
     
     match /reviews/{reviewId} {

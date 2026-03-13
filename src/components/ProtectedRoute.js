@@ -29,6 +29,11 @@ const ProtectedRoute = ({ children }) => {
         return <Navigate to="/" replace />;
     }
 
+    if (!user.emailVerified) {
+        // Force back to login if email isn't verified
+        return <Navigate to="/" replace />;
+    }
+
     return children;
 };
 
