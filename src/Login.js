@@ -4,6 +4,7 @@ import { auth, db, googleProvider, appleProvider } from './firebaseConfig';
 import { signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Swal from 'sweetalert2'; // 1. Import SweetAlert2
+import { Eye, EyeOff } from 'lucide-react';
 import './Login.css';
 
 const Login = () => {
@@ -172,9 +173,11 @@ const Login = () => {
               <span
                 className="input-group-text bg-light border-0"
                 onClick={() => setShowPassword(!showPassword)}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#1a4d8c'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#6c757d'}
               >
-                {showPassword ? "👁️‍🗨️" : "👁️"}
+                {showPassword ? <EyeOff size={20} color="currentColor" /> : <Eye size={20} color="currentColor" />}
               </span>
             </div>
           </div>

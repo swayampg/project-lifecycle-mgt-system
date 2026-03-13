@@ -45,6 +45,7 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                 await updateProjectTask(review.taskId, {
                     reviewStatus: newStatus,
                     mentorComment,
+                    completed: actionType === 'reviewed' // Auto-check if approved, uncheck if changes requested
                 });
             }
 

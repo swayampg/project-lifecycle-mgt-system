@@ -74,16 +74,19 @@ const Header = () => {
             // Fetch project role
             getUserRoleInProject(selectedProjectId, currentUser.uid).then(setProjectRole);
 
-            // Real-time news listener
+            // Real-time news listener for ALL news
             const newsQuery = query(
                 collection(db, "news"),
                 where("prjid", "==", selectedProjectId),
-                orderBy("createdAt", "desc"),
-                limit(1)
+                orderBy("createdAt", "desc")
             );
             unsubscribeNews = onSnapshot(newsQuery, (snapshot) => {
-                if (!snapshot.empty) {
-                    setLatestNews(snapshot.docs[0].data());
+                const newsItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setAllNews(newsItems);
+                if (newsItems.length > 0) {
+                    setLatestNews(newsItems[0]);
+                } else {
+                    setLatestNews(null);
                 }
             }, (error) => {
                 console.error("Header news listener error:", error);
@@ -91,6 +94,7 @@ const Header = () => {
         } else {
             setProjectRole(null);
             setLatestNews(null);
+            setAllNews([]);
         }
 
         return () => {
@@ -126,11 +130,10 @@ const Header = () => {
         setIsProfilePopupOpen(!isProfilePopupOpen);
     };
 
-    const openNewsModal = async (e) => {
+    const openNewsModal = (e) => {
         if (e) e.stopPropagation();
         const selectedProjectId = localStorage.getItem('selectedProjectId');
-        console.log("Opening News Modal. Project ID:", selectedProjectId);
-
+        
         if (!selectedProjectId) {
             Swal.fire({
                 icon: 'warning',
@@ -142,13 +145,7 @@ const Header = () => {
         }
 
         setIsNewsModalOpen(true);
-        try {
-            const news = await getAllNews(selectedProjectId);
-            setAllNews(news || []);
-        } catch (error) {
-            console.error("Failed to fetch news history:", error);
-            setAllNews([]);
-        }
+        // allNews is now handled by the real-time listener in useEffect
     };
 
     const handleSearchChange = (e) => {

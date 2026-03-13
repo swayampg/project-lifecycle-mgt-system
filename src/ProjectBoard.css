@@ -595,14 +595,16 @@
 
 /* ── Delete Task Button ── */
 .delete-task-btn {
-    background-color: transparent;
-    color: #d9534f;
-    border: 1px solid #d9534f;
+    background-color: #ff5252;
+    color: white;
+    border: none;
     margin-right: auto;
 }
 
 .delete-task-btn:hover {
-    background-color: #fff1f0;
+    background-color: #ff3b3b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3);
 }
 
 /* ── Save (Create) Task Button ── */

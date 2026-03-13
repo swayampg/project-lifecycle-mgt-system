@@ -324,16 +324,6 @@ const ProjectBoard = () => {
         if (!newTaskName.trim()) return;
 
         try {
-            // Upload pending files to Firebase Storage
-            const uploadedFiles = await Promise.all(pendingFiles.map(async (file) => {
-                const path = `tasks/${projectId}/${Date.now()}_${file.name}`;
-                const url = await uploadFile(file, path);
-                const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
-                return { url, name: file.name, type: fileType };
-            }));
-
-            const finalMedia = { files: uploadedFiles };
-
             const taskData = {
                 name: newTaskName,
                 description: newTaskDescription,
@@ -342,7 +332,7 @@ const ProjectBoard = () => {
                 deadline: newDeadline,
                 status: newStatus,
                 priority: newPriority,
-                media: finalMedia,
+                media: { files: [] },
                 phaseId: currentPhaseId,
                 completed: false,
                 reviewStatus: null
@@ -357,7 +347,6 @@ const ProjectBoard = () => {
                 return p;
             }));
             setIsAddTaskModalOpen(false);
-            setPendingFiles([]);
             Swal.fire({
                 title: 'Success!',
                 text: 'Task added successfully!',
@@ -383,6 +372,20 @@ const ProjectBoard = () => {
         e.stopPropagation();
         const currentPhase = phases.find(p => p.id === phaseId);
         const task = currentPhase.tasks.find(t => t.id === taskId);
+
+        // Permission check: Only assignee or leader can toggle
+        const canToggle = isLeader || task.assignTo === currentUserName;
+
+        if (!canToggle) {
+            Swal.fire({
+                title: 'Permission Denied',
+                text: 'Only the assigned member or the Project Leader can mark this task as complete.',
+                icon: 'info',
+                confirmButtonColor: '#1a4d8c'
+            });
+            return;
+        }
+
         const newCompleted = !task.completed;
 
         try {
@@ -500,6 +503,18 @@ const ProjectBoard = () => {
     const handleValidateTask = async (e) => {
         e.preventDefault();
         if (!currentTask) return;
+
+        // Check if a mentor is added to the project
+        const hasMentor = teamMembers.some(member => member.role === 'Mentor');
+        if (!hasMentor) {
+            Swal.fire({
+                title: 'Mentor Not Found',
+                text: 'A mentor is not yet added in the project for validation. Please add a mentor before validating tasks.',
+                icon: 'warning',
+                confirmButtonColor: '#1a4d8c'
+            });
+            return;
+        }
 
         setIsSendingToMentor(true);
 
@@ -845,35 +860,6 @@ const ProjectBoard = () => {
                                                 <option value="Done">Done</option>
                                             </select>
                                         </div>
-                                    </div>
-                                </div>
-
-                                {/* Attachments */}
-                                <div className="media-upload-section mt-4">
-                                    <label className="fw-bold d-block mb-2">Attachments</label>
-                                    <div className="d-flex gap-2 mb-2">
-                                        <label className="btn btn-outline-secondary btn-sm mb-0 d-flex align-items-center gap-1" style={{ borderRadius: '8px', padding: '6px 12px' }}>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
-                                            Add Files
-                                            <input type="file" hidden multiple onChange={handleFileChange} />
-                                        </label>
-                                    </div>
-                                    <div className="media-previews d-flex flex-wrap gap-2">
-                                        {newMedia.files && newMedia.files.map((file, i) => (
-                                            <div key={i} className="media-thumb">
-                                                {file.type === 'photo' ? (
-                                                    <img src={file.url} alt={file.name} />
-                                                ) : file.type === 'video' ? (
-                                                    <video src={file.url} />
-                                                ) : (
-                                                    <div className="other-file-icon">
-                                                        <Layout size={24} />
-                                                        <span className="file-name-hint">{file.name}</span>
-                                                    </div>
-                                                )}
-                                                <div className="remove-media-overlay" onClick={() => removeMedia(i)}><X size={12} /></div>
-                                            </div>
-                                        ))}
                                     </div>
                                 </div>
                             </div>
