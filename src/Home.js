@@ -15,7 +15,8 @@ import {
     cancelProjectDeletion,
     updateMemberConsent,
     updateProject,
-    getTotalTasksCountByAssignee
+    getTotalTasksCountByAssignee,
+    checkMemberRoleExists
 } from './services/db_services';
 
 import './Home.css';
@@ -195,14 +196,27 @@ const Home = () => {
                 return;
             }
 
-            // 3. Check for existing invitation
+            // 4. Check for existing invitation
             const existingInvites = await getExistingInvitationsByProject(projectForInvite.proj_id, user.uid);
             if (existingInvites.length > 0) {
                 Swal.fire({ icon: 'info', text: "An invitation is already pending for this user." });
                 return;
             }
 
-            // 4. Send invitation
+            // 5. Enforce single Mentor limit
+            if (invitationData.role === 'Mentor') {
+                const mentorExists = await checkMemberRoleExists(projectForInvite.proj_id, 'Mentor');
+                if (mentorExists) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Mentor Already Exists',
+                        text: "This project already has a Mentor assigned or a pending invitation for one."
+                    });
+                    return;
+                }
+            }
+
+            // 6. Send invitation
             await sendInvitation(
                 { proj_id: projectForInvite.proj_id, Name: projectForInvite.Name, projectLeader: projectForInvite.projectLeader },
                 user,

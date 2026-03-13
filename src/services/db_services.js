@@ -811,3 +811,36 @@ export const updateProjectStatus = async (projId, status, completedDate = null) 
         throw error;
     }
 };
+/**
+ * Checks if a specific role is already filled or has a pending invitation in a project.
+ * @param {string} projId 
+ * @param {string} role 
+ * @returns {Promise<boolean>}
+ */
+export const checkMemberRoleExists = async (projId, role) => {
+    try {
+        // 1. Check projectTeam collection
+        const teamQ = query(
+            collection(db, "projectTeam"),
+            where("prjid", "==", projId),
+            where("role", "==", role)
+        );
+        const teamSnapshot = await getDocs(teamQ);
+        if (!teamSnapshot.empty) return true;
+
+        // 2. Check invitations collection (pending status)
+        const inviteQ = query(
+            collection(db, "invitations"),
+            where("prjid", "==", projId),
+            where("role", "==", role),
+            where("status", "==", "pending")
+        );
+        const inviteSnapshot = await getDocs(inviteQ);
+        if (!inviteSnapshot.empty) return true;
+
+        return false;
+    } catch (error) {
+        console.error("Error checking role exists:", error);
+        return false;
+    }
+};
