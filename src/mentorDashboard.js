@@ -6,7 +6,6 @@ import { Send, CheckCircle } from 'lucide-react';
 import { auth, db } from './firebaseConfig';
 import { collection, query, where, onSnapshot, orderBy, getDocs } from 'firebase/firestore';
 import { getUserRoleInProject, addNews, updateProjectStatus } from './services/db_services';
-import { getReviewsByProject } from './services/db_services';
 import ReviewTask from './Reviewtask';
 import Swal from 'sweetalert2';
 import './mentorDashboard.css';
@@ -27,6 +26,14 @@ const MentorDashboard = () => {
     const [projectStatus, setProjectStatus] = useState(null);
     const [progress, setProgress] = useState(0);
     const [projectData, setProjectData] = useState(null);
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         let unsubscribeNews = null;
@@ -50,7 +57,7 @@ const MentorDashboard = () => {
                         orderBy("createdAt", "desc")
                     );
                     unsubscribeNews = onSnapshot(q, (snapshot) => {
-                        setMentorNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                        setMentorNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data({ serverTimestamps: 'estimate' }) })));
                     });
 
                     // ✅ Real-time reviews listener
@@ -118,6 +125,15 @@ const MentorDashboard = () => {
             if (unsubscribeProject) unsubscribeProject();
         };
     }, [navigate]);
+
+    const newsListRef = React.useRef(null);
+
+    // Auto-scroll to bottom when new news arrives
+    useEffect(() => {
+        if (newsListRef.current) {
+            newsListRef.current.scrollTop = newsListRef.current.scrollHeight;
+        }
+    }, [mentorNews]);
 
     const handleSendNews = async () => {
         if (!newsText.trim()) return;
@@ -198,6 +214,23 @@ const MentorDashboard = () => {
                 {priority || 'N/A'}
             </span>
         );
+    };
+
+    const getRelativeTime = (timestamp) => {
+        if (!timestamp) return 'Just now';
+        
+        const past = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+        const seconds = Math.floor((currentTime - past) / 1000);
+        
+        if (seconds < 60) return `${Math.max(0, seconds)} sec${seconds !== 1 ? 's' : ''} ago`;
+        
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} min${minutes !== 1 ? 's' : ''} ago`;
+        
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} hr${hours !== 1 ? 's' : ''} ago`;
+        
+        return past.toLocaleDateString();
     };
 
     return (
@@ -395,9 +428,9 @@ const MentorDashboard = () => {
                     <div className="news-card">
                         <div className="news-header">News</div>
                         <div className="news-body">
-                            <div className="news-list">
-                                {mentorNews.map(item => (
-                                    <div key={item.id} className="news-item">
+                            <div className="news-list" ref={newsListRef}>
+                                {[...mentorNews].reverse().map(item => (
+                                    <div key={item.id} className="news-item animate-fade-in">
                                         <div className="news-avatar" style={{ backgroundColor: '#1a4d8c' }}>
                                             <div className="icon-placeholder">👤</div>
                                         </div>
@@ -405,9 +438,7 @@ const MentorDashboard = () => {
                                             <div className="news-info-top">
                                                 <span className="news-name">{item.senderName}</span>
                                                 <span className="news-time">
-                                                    {item.createdAt?.toDate
-                                                        ? item.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                                        : 'Just now'}
+                                                    {getRelativeTime(item.createdAt)}
                                                 </span>
                                             </div>
                                             <p className="news-message">{item.message}</p>
@@ -424,7 +455,12 @@ const MentorDashboard = () => {
                                         className="release-note-input"
                                         value={newsText}
                                         onChange={(e) => setNewsText(e.target.value)}
-                                        onKeyPress={(e) => e.key === 'Enter' && handleSendNews()}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleSendNews();
+                                            }
+                                        }}
                                     />
                                     <button className="release-note-send-btn" onClick={handleSendNews}>
                                         <Send size={18} color="white" />

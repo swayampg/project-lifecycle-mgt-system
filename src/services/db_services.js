@@ -463,7 +463,7 @@ export const addNews = async (newsData) => {
     try {
         await addDoc(collection(db, "news"), {
             ...newsData,
-            createdAt: new Date()
+            createdAt: serverTimestamp()
         });
     } catch (error) {
         console.error("Error adding news:", error);

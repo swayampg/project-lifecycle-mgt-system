@@ -166,7 +166,7 @@ const Header = () => {
     const openNewsModal = (e) => {
         if (e) e.stopPropagation();
         const selectedProjectId = localStorage.getItem('selectedProjectId');
-        
+
         if (!selectedProjectId) {
             Swal.fire({
                 icon: 'warning',
