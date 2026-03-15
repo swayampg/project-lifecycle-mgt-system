@@ -74,10 +74,6 @@ const Home = () => {
 
 
     useEffect(() => {
-        // Clear selected project when visiting Home
-        localStorage.removeItem('selectedProjectId');
-        setSelectedProjectId(null);
-
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             setCurrentUser(user);
             if (user) {
