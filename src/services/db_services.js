@@ -844,3 +844,44 @@ export const checkMemberRoleExists = async (projId, role) => {
         return false;
     }
 };
+
+/**
+ * Logs a specific project action representing history or activity.
+ * @param {string} projId 
+ * @param {string} userName 
+ * @param {string} actionType - E.g. "Task Created", "Phase Added", "Member Added"
+ * @param {string} details - A readable description of what happened
+ */
+export const logProjectAction = async (projId, userName, actionType, details) => {
+    try {
+        await addDoc(collection(db, "project_logs"), {
+            projId,
+            userName: userName || 'System',
+            actionType,
+            details,
+            timestamp: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error logging project action:", error);
+    }
+};
+
+/**
+ * Fetches the project logs/activity history.
+ * @param {string} projId 
+ * @returns {Promise<Array>}
+ */
+export const getProjectLogs = async (projId) => {
+    try {
+        const q = query(
+            collection(db, "project_logs"),
+            where("projId", "==", projId),
+            orderBy("timestamp", "desc")
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching project logs:", error);
+        return [];
+    }
+};

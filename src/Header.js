@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Settings, User as UserIcon } from 'lucide-react';
+import { Search, Bell, Settings, User as UserIcon, History } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { auth, db } from './firebaseConfig';
 
@@ -24,6 +24,8 @@ const Header = () => {
     const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
 
     const [currentUser, setCurrentUser] = useState(null);
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [projectLogs, setProjectLogs] = useState([]);
 
     // Auth state listener
     useEffect(() => {
@@ -69,6 +71,7 @@ const Header = () => {
         const selectedProjectId = localStorage.getItem('selectedProjectId');
 
         let unsubscribeNews = () => { };
+        let unsubscribeLogs = () => { };
 
         if (selectedProjectId) {
             // Fetch project role
@@ -91,15 +94,28 @@ const Header = () => {
             }, (error) => {
                 console.error("Header news listener error:", error);
             });
+
         } else {
             setProjectRole(null);
             setLatestNews(null);
             setAllNews([]);
         }
 
+        // Real-time listener for ALL project history logs (Global)
+        const logsQuery = query(
+            collection(db, "project_logs"),
+            orderBy("timestamp", "desc"),
+            limit(50)
+        );
+        unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
+            const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setProjectLogs(logs);
+        });
+
         return () => {
             unsubscribeInvites();
             unsubscribeNews();
+            unsubscribeLogs();
         };
     }, [currentUser]);
 
@@ -146,6 +162,10 @@ const Header = () => {
 
         setIsNewsModalOpen(true);
         // allNews is now handled by the real-time listener in useEffect
+    };
+
+    const openHistoryModal = () => {
+        setIsHistoryModalOpen(true);
     };
 
     const handleSearchChange = (e) => {
@@ -324,6 +344,12 @@ const Header = () => {
                         size={20}
                         className="header-icon cursor-pointer"
                     />
+                    <History
+                        size={20}
+                        className="header-icon cursor-pointer"
+                        title="Project History"
+                        onClick={openHistoryModal}
+                    />
                 </div>
             </header >
             {/* Spacer to prevent content from going under the fixed header */}
@@ -362,6 +388,45 @@ const Header = () => {
                             </div>
                             <div className="modal-footer border-top-0 pt-0">
                                 <button className="btn btn-secondary w-100" style={{ borderRadius: '8px' }} onClick={() => setIsNewsModalOpen(false)}>Close</button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                isHistoryModalOpen && (
+                    <div className="news-history-modal-overlay">
+                        <div className="news-history-modal shadow-lg">
+                            <div className="modal-header border-bottom-0 pb-0">
+                                <h5 className="fw-bold mb-0">Project Activity History</h5>
+                                <button className="btn-close" onClick={() => setIsHistoryModalOpen(false)}></button>
+                            </div>
+                            <div className="modal-body py-4" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                                {projectLogs.length > 0 ? (
+                                    <div className="news-list" style={{ padding: '0 10px' }}>
+                                        {projectLogs.map((log) => (
+                                            <div key={log.id} style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
+                                                <div style={{ fontSize: '0.9rem' }}>
+                                                    <strong>{log.userName}</strong>
+                                                    <span style={{ color: '#666', marginLeft: '10px' }}>
+                                                        {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : new Date().toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: '0.9rem', marginTop: '5px' }}>
+                                                    {log.actionType}: {log.details}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-muted py-5">
+                                        No activity history available for this project.
+                                    </div>
+                                )}
+                            </div>
+                            <div className="modal-footer border-top-0 pt-0">
+                                <button className="btn btn-secondary w-100" style={{ borderRadius: '8px' }} onClick={() => setIsHistoryModalOpen(false)}>Close</button>
                             </div>
                         </div>
                     </div>

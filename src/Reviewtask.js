@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { auth, db } from './firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { updateReviewStatus, sendNotification, updateProjectTask } from './services/db_services';
+import { updateReviewStatus, sendNotification, updateProjectTask, logProjectAction } from './services/db_services';
 import { FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 import './Reviewtask.css';
@@ -67,6 +67,14 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                     taskId: review.taskId,
                 });
             }
+
+            const mentorObj = auth.currentUser;
+            await logProjectAction(
+                review.projectId,
+                mentorObj?.displayName || 'Mentor',
+                actionType === 'reviewed' ? "Task Approved" : "Task Changes Requested",
+                actionType === 'reviewed' ? `Approved task "${review.taskName}"` : `Requested changes for task "${review.taskName}"`
+            );
 
             onReviewComplete();
         } catch (error) {

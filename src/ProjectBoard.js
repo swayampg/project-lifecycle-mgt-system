@@ -17,7 +17,8 @@ import {
     getTasksByPhase,
     updateProjectTask,
     deleteProjectTask,
-    uploadFile
+    uploadFile,
+    logProjectAction
 } from './services/db_services';
 import { sendTaskForReview } from './services/db_services';
 import BottomNav from './BottomNav';
@@ -145,6 +146,7 @@ const ProjectBoard = () => {
     const handleAddPhase = async () => {
         try {
             const newPhase = await addProjectPhase(projectId, 'New Phase', project?.Name || "");
+            await logProjectAction(projectId, currentUserName, "Phase Added", `Added new phase "New Phase"`);
             setPhases(prev => [...prev, {
                 id: newPhase.id,
                 title: newPhase.phaseName,
@@ -174,7 +176,9 @@ const ProjectBoard = () => {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
+                    const phaseName = phases.find(p => p.id === phaseId)?.title || "Unknown Phase";
                     await deleteProjectPhase(phaseId);
+                    await logProjectAction(projectId, currentUserName, "Phase Removed", `Removed phase "${phaseName}"`);
                     setPhases(prev => prev.filter(p => p.id !== phaseId));
                     Swal.fire({
                         title: 'Removed!',
@@ -339,6 +343,13 @@ const ProjectBoard = () => {
             };
 
             const taskId = await addProjectTask(taskData);
+
+            let logDetails = `Added task "${taskData.name}"`;
+            if (taskData.assignTo) {
+                logDetails += ` and assigned to ${taskData.assignTo}`;
+            }
+            await logProjectAction(projectId, currentUserName, "Task Added", logDetails);
+            
             const newTask = { id: taskId, ...taskData };
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {
@@ -390,6 +401,7 @@ const ProjectBoard = () => {
 
         try {
             await updateProjectTask(taskId, { completed: newCompleted });
+            await logProjectAction(projectId, currentUserName, "Task Status Changed", `Marked task "${task.name}" as ${newCompleted ? 'Complete' : 'Incomplete'}`);
             setPhases(prev => prev.map(p => {
                 if (p.id === phaseId) {
                     return {
@@ -468,6 +480,15 @@ const ProjectBoard = () => {
             };
 
             await updateProjectTask(currentTask.id, updates);
+
+            let logDetails = `Updated task "${newTaskName}"`;
+            if (currentTask.assignTo !== newAssignTo && newAssignTo) {
+                logDetails += ` and assigned it to ${newAssignTo}`;
+            } else if (currentTask.assignTo !== newAssignTo && !newAssignTo) {
+                logDetails += ` and removed assignee`;
+            }
+            await logProjectAction(projectId, currentUserName, "Task Updated", logDetails);
+
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {
                     return {
@@ -614,6 +635,7 @@ const ProjectBoard = () => {
             if (result.isConfirmed) {
                 try {
                     await deleteProjectTask(currentTask.id);
+                    await logProjectAction(projectId, currentUserName, "Task Deleted", `Deleted task "${currentTask.name}"`);
                     setPhases(prev => prev.map(p => {
                         if (p.id === currentPhaseId) {
                             return {
