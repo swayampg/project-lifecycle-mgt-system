@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/project-lifecycle-mgt-system/static/css/main.a6afc146.css",
-    "main.js": "/project-lifecycle-mgt-system/static/js/main.f44187a4.js",
+    "main.css": "/project-lifecycle-mgt-system/static/css/main.a90cc51b.css",
+    "main.js": "/project-lifecycle-mgt-system/static/js/main.978c11db.js",
     "static/js/453.120ed337.chunk.js": "/project-lifecycle-mgt-system/static/js/453.120ed337.chunk.js",
     "index.html": "/project-lifecycle-mgt-system/index.html",
-    "main.a6afc146.css.map": "/project-lifecycle-mgt-system/static/css/main.a6afc146.css.map",
-    "main.f44187a4.js.map": "/project-lifecycle-mgt-system/static/js/main.f44187a4.js.map",
+    "main.a90cc51b.css.map": "/project-lifecycle-mgt-system/static/css/main.a90cc51b.css.map",
+    "main.978c11db.js.map": "/project-lifecycle-mgt-system/static/js/main.978c11db.js.map",
     "453.120ed337.chunk.js.map": "/project-lifecycle-mgt-system/static/js/453.120ed337.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.a6afc146.css",
-    "static/js/main.f44187a4.js"
+    "static/css/main.a90cc51b.css",
+    "static/js/main.978c11db.js"
   ]
 }
