@@ -6,7 +6,7 @@ import { auth, db } from './firebaseConfig';
 
 import { doc, collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { getUserRoleInProject, getAllNews, getUserProjects } from './services/db_services';
+import { getUserRoleInProject, getUserProjects } from './services/db_services';
 import './Header.css';
 
 const Header = () => {
@@ -17,6 +17,7 @@ const Header = () => {
     const [notificationCount, setNotificationCount] = useState(0);
     const [latestNews, setLatestNews] = useState(null);
     const [allNews, setAllNews] = useState([]);
+    const [newsIndex, setNewsIndex] = useState(0);
     const [isNewsModalOpen, setIsNewsModalOpen] = useState(false);
     const [userProjects, setUserProjects] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -86,11 +87,6 @@ const Header = () => {
             unsubscribeNews = onSnapshot(newsQuery, (snapshot) => {
                 const newsItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setAllNews(newsItems);
-                if (newsItems.length > 0) {
-                    setLatestNews(newsItems[0]);
-                } else {
-                    setLatestNews(null);
-                }
             }, (error) => {
                 console.error("Header news listener error:", error);
             });
@@ -118,6 +114,27 @@ const Header = () => {
             unsubscribeLogs();
         };
     }, [currentUser]);
+
+    // Auto-refresh news ticker rotation
+    useEffect(() => {
+        if (allNews.length > 1) {
+            const interval = setInterval(() => {
+                setNewsIndex((prevIndex) => (prevIndex + 1) % allNews.length);
+            }, 5000); // Rotate every 5 seconds
+            return () => clearInterval(interval);
+        } else {
+            setNewsIndex(0);
+        }
+    }, [allNews.length]);
+
+    // Update latest news when index or allNews changes
+    useEffect(() => {
+        if (allNews.length > 0) {
+            setLatestNews(allNews[newsIndex]);
+        } else {
+            setLatestNews(null);
+        }
+    }, [newsIndex, allNews]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -312,12 +329,12 @@ const Header = () => {
                     <div className="header-news-ticker-container d-flex align-items-center gap-2">
                         <div className="header-news-ticker">
                             {latestNews ? (
-                                <div className="ticker-content">
+                                <div className="ticker-content" key={latestNews.id}>
                                     <span className="ticker-label">LATEST NEWS:</span>
                                     <span className="ticker-message">{latestNews.message}</span>
                                 </div>
                             ) : (
-                                <div className="ticker-content empty">
+                                <div className="ticker-content empty" key="empty">
                                     <span className="ticker-message">No news updates yet</span>
                                 </div>
                             )}

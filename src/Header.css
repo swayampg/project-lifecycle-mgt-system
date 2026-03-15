@@ -157,6 +157,11 @@
     animation: ticker-fade 0.5s ease-in-out;
 }
 
+@keyframes ticker-fade {
+    0% { opacity: 0; transform: translateY(5px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
 .ticker-label {
     font-weight: 700;
     color: #f4d03f;
