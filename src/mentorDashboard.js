@@ -36,11 +36,11 @@ const MentorDashboard = () => {
     }, []);
 
     useEffect(() => {
-        let unsubscribeNews = null;
-        let unsubscribeReviews = null;
-        let unsubscribeProject = null; // Declare unsubscribeProject here
+        let unsubNews = null;
+        let unsubReviews = null;
+        let unsubProject = null;
 
-        const checkAccess = async () => {
+        const setupListeners = async () => {
             const user = auth.currentUser;
             const selectedProjectId = localStorage.getItem('selectedProjectId');
 
@@ -51,21 +51,24 @@ const MentorDashboard = () => {
                     setIsAuthorized(true);
 
                     // News listener
-                    const q = query(
+                    const newsQ = query(
                         collection(db, "news"),
                         where("prjid", "==", selectedProjectId),
                         orderBy("createdAt", "desc")
                     );
-                    unsubscribeNews = onSnapshot(q, (snapshot) => {
-                        setMentorNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data({ serverTimestamps: 'estimate' }) })));
+                    unsubNews = onSnapshot(newsQ, { serverTimestamps: 'estimate' }, (snapshot) => {
+                        setMentorNews(snapshot.docs.map(doc => ({ 
+                            id: doc.id, 
+                            ...doc.data() 
+                        })));
                     });
 
-                    // ✅ Real-time reviews listener
-                    const reviewsQuery = query(
+                    // Real-time reviews listener
+                    const reviewsQ = query(
                         collection(db, "reviews"),
                         where("projectId", "==", selectedProjectId)
                     );
-                    unsubscribeReviews = onSnapshot(reviewsQuery, (snapshot) => {
+                    unsubReviews = onSnapshot(reviewsQ, (snapshot) => {
                         const allReviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         setPendingTasks(allReviews.filter(r => r.reviewStatus === 'pending'));
                         setReviewedTasks(allReviews.filter(r => r.reviewStatus === 'reviewed' || r.reviewStatus === 'changes_requested'));
@@ -73,9 +76,8 @@ const MentorDashboard = () => {
                     });
 
                     // Project status and progress listener
-                    const projectRef = collection(db, "projects");
-                    const projectQuery = query(projectRef, where("proj_id", "==", selectedProjectId));
-                    unsubscribeProject = onSnapshot(projectQuery, async (snapshot) => {
+                    const projectQ = query(collection(db, "projects"), where("proj_id", "==", selectedProjectId));
+                    unsubProject = onSnapshot(projectQ, async (snapshot) => {
                         if (!snapshot.empty) {
                             const projData = snapshot.docs[0].data();
                             setProjectStatus(projData.status);
@@ -101,28 +103,20 @@ const MentorDashboard = () => {
                             }
                         }
                     });
-
-                    // Cleanup function for this block
-                    return () => {
-                        if (unsubscribeNews) unsubscribeNews();
-                        if (unsubscribeReviews) unsubscribeReviews();
-                        if (unsubscribeProject) unsubscribeProject();
-                    };
                 } else {
-                    navigate('/home'); // If not mentor, navigate away
+                    navigate('/home');
                 }
             } else {
-                navigate('/'); // If no user or project, navigate to login
+                navigate('/');
             }
         };
 
-        checkAccess();
+        setupListeners();
 
-        // Global cleanup for useEffect
         return () => {
-            if (unsubscribeNews) unsubscribeNews();
-            if (unsubscribeReviews) unsubscribeReviews();
-            if (unsubscribeProject) unsubscribeProject();
+            if (unsubNews) unsubNews();
+            if (unsubReviews) unsubReviews();
+            if (unsubProject) unsubProject();
         };
     }, [navigate]);
 

@@ -84,9 +84,11 @@ const Header = () => {
                 where("prjid", "==", selectedProjectId),
                 orderBy("createdAt", "desc")
             );
-            unsubscribeNews = onSnapshot(newsQuery, (snapshot) => {
+            unsubscribeNews = onSnapshot(newsQuery, { serverTimestamps: 'estimate' }, (snapshot) => {
                 const newsItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setAllNews(newsItems);
+                // Reset to latest news immediately when new news arrives
+                setNewsIndex(0);
             }, (error) => {
                 console.error("Header news listener error:", error);
             });

@@ -21,7 +21,7 @@ import {
 } from './services/db_services';
 
 import './Home.css';
-import { Plus, Folder, CheckSquare, Trash2, UserPlus, Search, X, Check, AlertCircle, Info, Edit2, Layers, Briefcase, Users, User, UserCheck, CheckCircle } from 'lucide-react';
+import { Plus, Folder, CheckSquare, Trash2, UserPlus, Search, X, Check, AlertCircle, Info, Edit2, Layers, Briefcase, Users, User, UserCheck, CheckCircle, FileText, Github } from 'lucide-react';
 import Swal from 'sweetalert2';
 import BottomNav from './BottomNav';
 import Header from './Header';
