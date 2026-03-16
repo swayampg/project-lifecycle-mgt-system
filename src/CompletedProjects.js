@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from './Header';
 import { getAllCompletedProjects } from './services/db_services';
 import './CompletedProjects.css';
-import { Award, Calendar, Folder, UserCheck, ArrowLeft } from 'lucide-react';
+import { Award, Calendar, Folder, UserCheck, ArrowLeft, FileText, Github } from 'lucide-react';
 
 const CompletedProjects = () => {
     const navigate = useNavigate();
@@ -67,6 +67,19 @@ const CompletedProjects = () => {
                                 </div>
                                 <h3 className="project-title">{project.Name}</h3>
                                 <p className="project-desc">{project.description || 'No description provided.'}</p>
+
+                                <div className="card-links d-flex gap-3 mb-3">
+                                    {project.projectReport && (
+                                        <a href={project.projectReport.startsWith('http') ? project.projectReport : `//${project.projectReport}`} target="_blank" rel="noopener noreferrer" className="text-decoration-none text-primary d-flex align-items-center gap-1 small">
+                                            <FileText size={14} /> Report
+                                        </a>
+                                    )}
+                                    {project.githubRepo && (
+                                        <a href={project.githubRepo.startsWith('http') ? project.githubRepo : `//${project.githubRepo}`} target="_blank" rel="noopener noreferrer" className="text-decoration-none text-dark d-flex align-items-center gap-1 small">
+                                            <Github size={14} /> Repository
+                                        </a>
+                                    )}
+                                </div>
 
                                 <div className="card-stats">
                                     <div className="stat-item">

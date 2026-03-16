@@ -20,7 +20,7 @@ import {
 } from './services/db_services';
 
 import './Home.css';
-import { Plus, Folder, CheckSquare, Trash2, UserPlus, Search, X, Check, AlertCircle, Info, Edit2, Layers, Briefcase, Users, User, UserCheck, CheckCircle } from 'lucide-react';
+import { Plus, Folder, CheckSquare, Trash2, UserPlus, Search, X, Check, AlertCircle, Info, Edit2, Layers, Briefcase, Users, User, UserCheck, CheckCircle, FileText, Github } from 'lucide-react';
 import Swal from 'sweetalert2';
 import BottomNav from './BottomNav';
 import Header from './Header';
@@ -45,7 +45,7 @@ const Home = () => {
     const [projectForDetails, setProjectForDetails] = useState(null);
     const [detailsTeamMembers, setDetailsTeamMembers] = useState([]);
     const [isEditingDetails, setIsEditingDetails] = useState(false);
-    const [editedProjectData, setEditedProjectData] = useState({ Name: '', description: '' });
+    const [editedProjectData, setEditedProjectData] = useState({ Name: '', description: '', projectReport: '', githubRepo: '' });
     const [isSavingDetails, setIsSavingDetails] = useState(false);
 
 
@@ -233,7 +233,7 @@ const Home = () => {
     const openDetailsModal = async (e, project) => {
         e.stopPropagation();
         setProjectForDetails(project);
-        setEditedProjectData({ Name: project.Name, description: project.description || '' });
+        setEditedProjectData({ Name: project.Name, description: project.description || '', projectReport: project.projectReport || '', githubRepo: project.githubRepo || '' });
         setIsDetailsModalOpen(true);
         setIsEditingDetails(false);
         try {
@@ -532,6 +532,52 @@ const Home = () => {
                                     )}
                                 </div>
 
+                                <div className="detail-section mb-4">
+                                    <label className="form-label d-flex align-items-center gap-2">
+                                        <FileText size={16} /> Project Report (URL / Text)
+                                    </label>
+                                    {isEditingDetails ? (
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Link to report..."
+                                            value={editedProjectData.projectReport}
+                                            onChange={(e) => setEditedProjectData({ ...editedProjectData, projectReport: e.target.value })}
+                                        />
+                                    ) : (
+                                        projectForDetails.projectReport ? (
+                                            <a href={projectForDetails.projectReport.startsWith('http') ? projectForDetails.projectReport : `//${projectForDetails.projectReport}`} target="_blank" rel="noopener noreferrer" className="text-primary text-break">
+                                                {projectForDetails.projectReport}
+                                            </a>
+                                        ) : (
+                                            <p className="text-muted">No report provided.</p>
+                                        )
+                                    )}
+                                </div>
+
+                                <div className="detail-section mb-4">
+                                    <label className="form-label d-flex align-items-center gap-2">
+                                        <Github size={16} /> GitHub Repo
+                                    </label>
+                                    {isEditingDetails ? (
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="GitHub repository link..."
+                                            value={editedProjectData.githubRepo}
+                                            onChange={(e) => setEditedProjectData({ ...editedProjectData, githubRepo: e.target.value })}
+                                        />
+                                    ) : (
+                                        projectForDetails.githubRepo ? (
+                                            <a href={projectForDetails.githubRepo.startsWith('http') ? projectForDetails.githubRepo : `//${projectForDetails.githubRepo}`} target="_blank" rel="noopener noreferrer" className="text-primary text-break">
+                                                {projectForDetails.githubRepo}
+                                            </a>
+                                        ) : (
+                                            <p className="text-muted">No GitHub repo provided.</p>
+                                        )
+                                    )}
+                                </div>
+
                                 <div className="row mb-4 text-secondary">
                                     <div className="col-6">
                                         <label className="form-label d-flex align-items-center gap-2">
@@ -589,7 +635,7 @@ const Home = () => {
                                         className="btn btn-secondary flex-grow-1"
                                         onClick={() => {
                                             setIsEditingDetails(false);
-                                            setEditedProjectData({ Name: projectForDetails.Name, description: projectForDetails.description || '' });
+                                            setEditedProjectData({ Name: projectForDetails.Name, description: projectForDetails.description || '', projectReport: projectForDetails.projectReport || '', githubRepo: projectForDetails.githubRepo || '' });
                                         }}
                                         disabled={isSavingDetails}
                                     >
