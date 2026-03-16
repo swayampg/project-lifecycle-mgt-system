@@ -16,7 +16,8 @@ import {
     updateMemberConsent,
     updateProject,
     getTotalTasksCountByAssignee,
-    checkMemberRoleExists
+    checkMemberRoleExists,
+    uploadFile
 } from './services/db_services';
 
 import './Home.css';
@@ -45,7 +46,8 @@ const Home = () => {
     const [projectForDetails, setProjectForDetails] = useState(null);
     const [detailsTeamMembers, setDetailsTeamMembers] = useState([]);
     const [isEditingDetails, setIsEditingDetails] = useState(false);
-    const [editedProjectData, setEditedProjectData] = useState({ Name: '', description: '' });
+    const [editedProjectData, setEditedProjectData] = useState({ Name: '', description: '', projectReport: '', githubRepo: '' });
+    const [projectReportFile, setProjectReportFile] = useState(null);
     const [isSavingDetails, setIsSavingDetails] = useState(false);
 
 
@@ -232,8 +234,8 @@ const Home = () => {
 
     const openDetailsModal = async (e, project) => {
         e.stopPropagation();
-        setProjectForDetails(project);
-        setEditedProjectData({ Name: project.Name, description: project.description || '' });
+        setEditedProjectData({ Name: project.Name, description: project.description || '', projectReport: project.projectReport || '', githubRepo: project.githubRepo || '' });
+        setProjectReportFile(null);
         setIsDetailsModalOpen(true);
         setIsEditingDetails(false);
         try {
@@ -259,16 +261,25 @@ const Home = () => {
 
         setIsSavingDetails(true);
         try {
-            await updateProject(projectForDetails.proj_id, editedProjectData);
+            let reportUrl = editedProjectData.projectReport;
+            if (projectReportFile) {
+                const filePath = `project_reports/${projectForDetails.proj_id}/${projectReportFile.name}`;
+                reportUrl = await uploadFile(projectReportFile, filePath);
+            }
+
+            const finalUpdates = { ...editedProjectData, projectReport: reportUrl };
+
+            await updateProject(projectForDetails.proj_id, finalUpdates);
             Swal.fire({ icon: 'success', title: 'Updated!', timer: 1500, showConfirmButton: false });
             setIsEditingDetails(false);
             // Refresh local state
-            setProjectForDetails({ ...projectForDetails, ...editedProjectData });
+            setProjectForDetails({ ...projectForDetails, ...finalUpdates });
             fetchData(currentUser);
         } catch (error) {
             Swal.fire('Error', 'Failed to update project details.', 'error');
         } finally {
             setIsSavingDetails(false);
+            setProjectReportFile(null);
         }
     };
 
@@ -532,6 +543,50 @@ const Home = () => {
                                     )}
                                 </div>
 
+                                <div className="detail-section mb-4">
+                                    <label className="form-label d-flex align-items-center gap-2">
+                                        <FileText size={16} /> Project Report (PDF)
+                                    </label>
+                                    {isEditingDetails ? (
+                                        <input
+                                            type="file"
+                                            className="form-control"
+                                            accept="application/pdf"
+                                            onChange={(e) => setProjectReportFile(e.target.files[0])}
+                                        />
+                                    ) : (
+                                        projectForDetails.projectReport ? (
+                                            <a href={projectForDetails.projectReport} target="_blank" rel="noopener noreferrer" className="text-primary text-break">
+                                                View Report
+                                            </a>
+                                        ) : (
+                                            <p className="text-muted">No report provided.</p>
+                                        )
+                                    )}
+                                </div>
+
+                                <div className="detail-section mb-4">
+                                    <label className="form-label d-flex align-items-center gap-2">
+                                        <Github size={16} /> GitHub Repo
+                                    </label>
+                                    {isEditingDetails ? (
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="GitHub repository link..."
+                                            value={editedProjectData.githubRepo}
+                                            onChange={(e) => setEditedProjectData({ ...editedProjectData, githubRepo: e.target.value })}
+                                        />
+                                    ) : (
+                                        projectForDetails.githubRepo ? (
+                                            <a href={projectForDetails.githubRepo.startsWith('http') ? projectForDetails.githubRepo : `//${projectForDetails.githubRepo}`} target="_blank" rel="noopener noreferrer" className="text-primary text-break">
+                                                {projectForDetails.githubRepo}
+                                            </a>
+                                        ) : (
+                                            <p className="text-muted">No GitHub repo provided.</p>
+                                        )
+                                    )}
+                                </div>
                                 <div className="row mb-4 text-secondary">
                                     <div className="col-6">
                                         <label className="form-label d-flex align-items-center gap-2">
@@ -589,7 +644,8 @@ const Home = () => {
                                         className="btn btn-secondary flex-grow-1"
                                         onClick={() => {
                                             setIsEditingDetails(false);
-                                            setEditedProjectData({ Name: projectForDetails.Name, description: projectForDetails.description || '' });
+                                            setEditedProjectData({ Name: projectForDetails.Name, description: projectForDetails.description || '', projectReport: projectForDetails.projectReport || '', githubRepo: projectForDetails.githubRepo || '' });
+                                            setProjectReportFile(null);
                                         }}
                                         disabled={isSavingDetails}
                                     >
