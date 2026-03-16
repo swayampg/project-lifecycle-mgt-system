@@ -348,6 +348,7 @@ const Header = () => {
                         <Bell
                             size={20}
                             className="header-icon cursor-pointer"
+                            title="Notifications"
                             onClick={() => navigate('/notifications')}
                         />
                         {notificationCount > 0 && (
@@ -360,11 +361,12 @@ const Header = () => {
                     <Settings
                         size={20}
                         className="header-icon cursor-pointer"
+                        title="Settings"
                     />
                     <History
                         size={20}
                         className="header-icon cursor-pointer"
-                        title="Project History"
+                        title="Log"
                         onClick={openHistoryModal}
                     />
                 </div>

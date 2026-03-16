@@ -104,7 +104,10 @@ const Feedback = () => {
                         </div>
                         <h2 className="text-primary mb-3">Thank You!</h2>
                         <p className="text-muted mb-4">Your feedback has been submitted successfully. We appreciate your help in improving the system.</p>
-                        <button className="submit-btn" onClick={() => setSubmitted(false)}>Submit Another</button>
+                        <div className="d-flex flex-column gap-3 mx-auto" style={{ maxWidth: '250px' }}>
+                            <button className="submit-btn m-0" onClick={() => setSubmitted(false)}>Submit Another</button>
+                            <button className="btn btn-outline-primary py-2 fw-bold" onClick={() => window.location.hash = '#/home'}>Go Back Home</button>
+                        </div>
                     </div>
                 </div>
                 <BottomNav />
