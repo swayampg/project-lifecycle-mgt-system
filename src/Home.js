@@ -130,6 +130,30 @@ const Home = () => {
             return;
         }
 
+        // Check if the leader is the only member — skip consent flow if so
+        const team = await getProjectTeamMembers(project.proj_id);
+        if (team.length <= 1) {
+            const soloResult = await Swal.fire({
+                title: 'Delete Project?',
+                text: `"${project.Name}" will be permanently deleted. This cannot be undone.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, Delete It'
+            });
+            if (soloResult.isConfirmed) {
+                try {
+                    await deleteProject(project.proj_id);
+                    Swal.fire('Deleted!', 'Project has been removed.', 'success');
+                    fetchData(currentUser);
+                } catch (error) {
+                    Swal.fire('Error', 'Failed to delete the project.', 'error');
+                }
+            }
+            return;
+        }
+
         const result = await Swal.fire({
             title: 'Request Project Deletion?',
             text: `You are requesting to delete "${project.Name}". All project members must consent before it can be deleted.`,

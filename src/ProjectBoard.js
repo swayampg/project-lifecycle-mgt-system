@@ -327,6 +327,7 @@ const ProjectBoard = () => {
         e.preventDefault();
         if (!newTaskName.trim()) return;
 
+        setIsUpdating(true);
         try {
             const taskData = {
                 name: newTaskName,

@@ -325,16 +325,19 @@ const CreateProject = () => {
                               {m.fullName} {m.isCreator && "(You)"}
                             </span>
                             <div className="d-flex gap-2">
-                              <select
-                                className="form-select form-select-sm border-0 bg-transparent p-0 text-muted"
-                                style={{ fontSize: '0.75rem', width: 'auto' }}
-                                value={m.role}
-                                onChange={(e) => updateMemberRole(m.uid, e.target.value)}
-                              >
-                                <option value="Member">Member</option>
-                                <option value="Leader">Leader</option>
-                                <option value="Mentor">Mentor</option>
-                              </select>
+                              {m.isCreator ? (
+                                <span className="text-muted" style={{ fontSize: '0.75rem' }}>Leader</span>
+                              ) : (
+                                <select
+                                  className="form-select form-select-sm border-0 bg-transparent p-0 text-muted"
+                                  style={{ fontSize: '0.75rem', width: 'auto' }}
+                                  value={m.role}
+                                  onChange={(e) => updateMemberRole(m.uid, e.target.value)}
+                                >
+                                  <option value="Member">Member</option>
+                                  <option value="Mentor">Mentor</option>
+                                </select>
+                              )}
                               {!m.isCreator && (
                                 <button
                                   type="button"
@@ -393,7 +396,6 @@ const CreateProject = () => {
                   onChange={(e) => setInvitationData({ ...invitationData, role: e.target.value })}
                 >
                   <option value="Member">Member</option>
-                  <option value="Leader">Leader</option>
                   <option value="Mentor">Mentor</option>
                 </select>
               </div>
