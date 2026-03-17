@@ -284,24 +284,47 @@ const Home = () => {
             return;
         }
 
+        if (!projectForDetails || !projectForDetails.proj_id) {
+            console.error("Missing project ID for update");
+            Swal.fire('Error', 'Could not identify the project. Please refresh and try again.', 'error');
+            return;
+        }
+
         setIsSavingDetails(true);
         try {
+            console.log("Saving project details...", projectForDetails.proj_id);
             let reportUrl = editedProjectData.projectReport;
+
             if (projectReportFile) {
                 const filePath = `project_reports/${projectForDetails.proj_id}/${projectReportFile.name}`;
+                console.log(`Attempting to upload report: ${projectReportFile.name}`);
                 reportUrl = await uploadFile(projectReportFile, filePath);
             }
 
             const finalUpdates = { ...editedProjectData, projectReport: reportUrl };
-
+            console.log("Updating Firestore document...");
             await updateProject(projectForDetails.proj_id, finalUpdates);
-            Swal.fire({ icon: 'success', title: 'Updated!', timer: 1500, showConfirmButton: false });
+
+            Swal.fire({ 
+                icon: 'success', 
+                title: 'Updated!', 
+                text: 'Project details updated successfully.',
+                timer: 2000, 
+                showConfirmButton: false 
+            });
+            
             setIsEditingDetails(false);
             // Refresh local state
             setProjectForDetails({ ...projectForDetails, ...finalUpdates });
             fetchData(currentUser);
         } catch (error) {
-            Swal.fire('Error', 'Failed to update project details.', 'error');
+            console.error("Detailed error in handleSaveDetails:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Update Failed',
+                text: `Something went wrong: ${error.message || 'Check connection or permissions'}`,
+                confirmButtonColor: '#1a4d8c'
+            });
         } finally {
             setIsSavingDetails(false);
             setProjectReportFile(null);

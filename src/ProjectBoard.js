@@ -18,6 +18,7 @@ import {
     updateProjectTask,
     deleteProjectTask,
     uploadFile,
+    deleteFile,
     logProjectAction
 } from './services/db_services';
 import { sendTaskForReview } from './services/db_services';
@@ -311,12 +312,26 @@ const ProjectBoard = () => {
         });
     };
 
-    const removeMedia = (index, isNew) => {
+    const removeMedia = async (index, isNew) => {
+        const fileToRemove = newMedia.files[index];
+        
         if (isNew) {
             // Remove from pending files
-            const fileName = newMedia.files[index].name;
-            setPendingFiles(prev => prev.filter(f => f.name !== fileName));
+            setPendingFiles(prev => prev.filter(f => f.name !== fileToRemove.name));
+        } else if (fileToRemove.url) {
+            // If it's an existing file, attempt to delete from Storage
+            try {
+                const decodedUrl = decodeURIComponent(fileToRemove.url);
+                const pathStart = decodedUrl.indexOf('/o/') + 3;
+                const pathEnd = decodedUrl.indexOf('?');
+                const storagePath = decodedUrl.substring(pathStart, pathEnd);
+                await deleteFile(storagePath);
+                console.log("Existing media file deleted from storage.");
+            } catch (err) {
+                console.warn("Failed to delete existing media from storage:", err);
+            }
         }
+
         setNewMedia(prev => ({
             ...prev,
             files: prev.files.filter((_, i) => i !== index)
@@ -455,18 +470,22 @@ const ProjectBoard = () => {
         };
 
         try {
+            console.log("Saving task details. Pending files:", pendingFiles.length);
             // Upload pending files if any
             let finalMedia = newMedia;
             if (pendingFiles.length > 0) {
-                const uploadedFiles = await Promise.all(pendingFiles.map(async (file) => {
-                    const path = `tasks/${projectId}/${Date.now()}_${file.name}`;
+                const uploadedFiles = await Promise.all(pendingFiles.map(async (file, index) => {
+                    // Use index + timestamp for unique path
+                    const path = `tasks/${projectId}/${Date.now()}_${index}_${file.name}`;
+                    console.log(`Uploading file ${index + 1}/${pendingFiles.length}: ${file.name}`);
                     const url = await uploadFile(file, path);
                     const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
                     return { url, name: file.name, type: fileType };
                 }));
                 // Combine existing (non-new) files with newly uploaded ones
-                const existingFiles = newMedia.files.filter(f => !f.isNew);
+                const existingFiles = (newMedia.files || []).filter(f => !f.isNew);
                 finalMedia = { files: [...existingFiles, ...uploadedFiles] };
+                console.log("All files uploaded successfully.");
             }
 
             const updates = {
@@ -553,20 +572,23 @@ const ProjectBoard = () => {
         };
 
         try {
+            console.log("Validating task. Uploading media if needed...");
             // Upload pending files if any
             let finalMedia = newMedia;
             if (pendingFiles.length > 0) {
-                const uploadedFiles = await Promise.all(pendingFiles.map(async (file) => {
-                    const path = `tasks/${projectId}/${Date.now()}_${file.name}`;
+                const uploadedFiles = await Promise.all(pendingFiles.map(async (file, index) => {
+                    const path = `tasks/${projectId}/${Date.now()}_${index}_${file.name}`;
+                    console.log(`Uploading evaluation media ${index + 1}/${pendingFiles.length}: ${file.name}`);
                     const url = await uploadFile(file, path);
                     const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
                     return { url, name: file.name, type: fileType };
                 }));
-                const existingFiles = newMedia.files.filter(f => !f.isNew);
+                const existingFiles = (newMedia.files || []).filter(f => !f.isNew);
                 finalMedia = { files: [...existingFiles, ...uploadedFiles] };
+                console.log("Evaluation media uploaded.");
             }
 
-            const updatedTask = {
+            const taskUpdates = {
                 ...currentTask,
                 name: newTaskName,
                 description: newTaskDescription,
@@ -576,15 +598,15 @@ const ProjectBoard = () => {
                 status: newStatus,
                 priority: newPriority,
                 media: finalMedia,
-                reviewStatus: 'pending'
+                reviewStatus: 'pending',
+                updatedAt: serverTimestamp()
             };
 
-            await updateProjectTask(currentTask.id, {
-                ...updatedTask,
-                updatedAt: serverTimestamp()
-            });
+            console.log("Updating task in Firestore...");
+            await updateProjectTask(currentTask.id, taskUpdates);
 
-            await sendTaskForReview(updatedTask, projectId);
+            console.log("Submitting to mentor review...");
+            await sendTaskForReview(taskUpdates, projectId);
 
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {
@@ -592,7 +614,7 @@ const ProjectBoard = () => {
                         ...p,
                         tasks: p.tasks.map(t =>
                             t.id === currentTask.id
-                                ? { ...t, ...updatedTask }
+                                ? { ...t, ...taskUpdates }
                                 : t
                         )
                     };

@@ -448,8 +448,13 @@ const Header = () => {
                                                         {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : new Date().toLocaleString()}
                                                     </span>
                                                 </div>
-                                                <div style={{ fontSize: '0.9rem', marginTop: '5px' }}>
-                                                    {log.actionType}: {log.details}
+                                                <div style={{ marginTop: '5px' }}>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1a4d8c', letterSpacing: '0.02em' }}>
+                                                        {log.actionType}
+                                                    </span>
+                                                    <div style={{ fontSize: '0.85rem', color: '#555', marginTop: '2px' }}>
+                                                        {log.details}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
