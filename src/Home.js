@@ -234,6 +234,7 @@ const Home = () => {
 
     const openDetailsModal = async (e, project) => {
         e.stopPropagation();
+        setProjectForDetails(project);
         setEditedProjectData({ Name: project.Name, description: project.description || '', projectReport: project.projectReport || '', githubRepo: project.githubRepo || '' });
         setProjectReportFile(null);
         setIsDetailsModalOpen(true);
