@@ -128,8 +128,6 @@ const Signup = () => {
 
     return (
         <div className="auth-container">
-            <div className="shape-left"></div>
-            <div className="shape-right"></div>
             <div className="login-card">
                 <h1 className="welcome-text">Join Us !</h1>
                 <form onSubmit={handleSignup}>

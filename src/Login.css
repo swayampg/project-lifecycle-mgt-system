@@ -7,39 +7,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #f8fafc;
+    background-image: url('./Assets/auth-img.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    z-index: 1000; /* Ensure it stays above global navigations if any */
+    z-index: 1000;
 }
 
-.shape-left {
-    position: absolute;
-    width: 40vw;
-    height: 40vw;
-    background: #1a4d8c;
-    border-radius: 50%;
-    top: -10vw;
-    left: -10vw;
-    z-index: -1;
-}
-
-.shape-right {
-    position: absolute;
-    width: 45vw;
-    height: 45vw;
-    background: #1a4d8c;
-    border-radius: 50%;
-    bottom: -15vw;
-    right: -15vw;
-    z-index: -1;
+.shape-left, .shape-right {
+    display: none;
 }
 
 .login-card {
     background: white;
     padding: 40px;
     border-radius: 25px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 10px 20px rgba(0, 0, 0, 0.05);
     width: 100%;
     max-width: 400px;
     z-index: 10;

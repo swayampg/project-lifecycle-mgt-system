@@ -138,8 +138,6 @@ const Login = () => {
 
   return (
     <div className="auth-container">
-      <div className="shape-left"></div>
-      <div className="shape-right"></div>
 
       <div className="login-card">
         <h1 className="welcome-text">Welcome !</h1>
