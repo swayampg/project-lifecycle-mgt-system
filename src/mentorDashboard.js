@@ -133,6 +133,14 @@ const MentorDashboard = () => {
         if (!newsText.trim()) return;
         try {
             const selectedProjectId = localStorage.getItem('selectedProjectId');
+            if (!selectedProjectId) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'No Project Selected',
+                    text: 'You must select a project before sending news.',
+                });
+                return;
+            }
             await addNews({
                 prjid: selectedProjectId,
                 message: newsText,
@@ -141,6 +149,11 @@ const MentorDashboard = () => {
             setNewsText('');
         } catch (error) {
             console.error("Failed to send news:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to send news update.',
+            });
         }
     };
 

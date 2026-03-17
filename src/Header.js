@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Bell, Settings, User as UserIcon, History } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { auth, db } from './firebaseConfig';
@@ -11,6 +11,7 @@ import './Header.css';
 
 const Header = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [userData, setUserData] = useState({ fullName: 'User', role: 'Member', email: '', profilePicture: '' });
     const [projectRole, setProjectRole] = useState(null);
     const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
@@ -53,6 +54,10 @@ const Header = () => {
     useEffect(() => {
         if (!currentUser) return;
 
+        // Define project-specific routes for news visibility gating
+        const PROJECT_ROUTES = ['/project-board', '/mentorDashboard', '/Progress', '/Reviewtask'];
+        const isProjectRoute = PROJECT_ROUTES.includes(location.pathname);
+
         // 1. GLOBAL LISTENERS (Always run when logged in)
 
         // Fetch all projects for global search
@@ -68,13 +73,13 @@ const Header = () => {
             setNotificationCount(snapshot.size);
         });
 
-        // 2. PROJECT-SPECIFIC LISTENERS (Run only if a project is selected)
+        // 2. PROJECT-SPECIFIC LISTENERS (Run only if a project is selected AND on a project route)
         const selectedProjectId = localStorage.getItem('selectedProjectId');
 
         let unsubscribeNews = () => { };
         let unsubscribeLogs = () => { };
 
-        if (selectedProjectId) {
+        if (selectedProjectId && isProjectRoute) {
             // Fetch project role
             getUserRoleInProject(selectedProjectId, currentUser.uid).then(setProjectRole);
 
@@ -86,17 +91,23 @@ const Header = () => {
             );
             unsubscribeNews = onSnapshot(newsQuery, { serverTimestamps: 'estimate' }, (snapshot) => {
                 const newsItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setAllNews(newsItems);
-                // Reset to latest news immediately when new news arrives
+                
+                // CRITICAL: Double check prjid in the data to prevent cross-leakage
+                const projectSpecificNews = newsItems.filter(item => item.prjid === selectedProjectId);
+                
+                setAllNews(projectSpecificNews);
                 setNewsIndex(0);
             }, (error) => {
                 console.error("Header news listener error:", error);
+                setAllNews([]);
             });
 
         } else {
+            // Clear news state when no project is selected or not on a project route
             setProjectRole(null);
             setLatestNews(null);
             setAllNews([]);
+            setNewsIndex(0);
         }
 
         // Real-time listener for ALL project history logs (Global)
@@ -115,7 +126,7 @@ const Header = () => {
             unsubscribeNews();
             unsubscribeLogs();
         };
-    }, [currentUser]);
+    }, [currentUser, location.pathname]);
 
     // Auto-refresh news ticker rotation
     useEffect(() => {
@@ -328,21 +339,24 @@ const Header = () => {
                         )}
                     </div>
 
-                    <div className="header-news-ticker-container d-flex align-items-center gap-2">
-                        <div className="header-news-ticker">
-                            {latestNews ? (
-                                <div className="ticker-content" key={latestNews.id}>
-                                    <span className="ticker-label">LATEST NEWS:</span>
-                                    <span className="ticker-message">{latestNews.message}</span>
-                                </div>
-                            ) : (
-                                <div className="ticker-content empty" key="empty">
-                                    <span className="ticker-message">No news updates yet</span>
-                                </div>
-                            )}
+                    {/* Only show news if a project is selected AND we are on a project-specific page */}
+                    {localStorage.getItem('selectedProjectId') && ['/project-board', '/mentorDashboard', '/Progress', '/Reviewtask'].includes(location.pathname) && (
+                        <div className="header-news-ticker-container d-flex align-items-center gap-2">
+                            <div className="header-news-ticker">
+                                {latestNews ? (
+                                    <div className="ticker-content" key={latestNews.id}>
+                                        <span className="ticker-label">LATEST NEWS:</span>
+                                        <span className="ticker-message">{latestNews.message}</span>
+                                    </div>
+                                ) : (
+                                    <div className="ticker-content empty" key="empty">
+                                        <span className="ticker-message">No news updates yet</span>
+                                    </div>
+                                )}
+                            </div>
+                            <button className="view-all-news-btn" onClick={(e) => openNewsModal(e)}>View All</button>
                         </div>
-                        <button className="view-all-news-btn" onClick={(e) => openNewsModal(e)}>View All</button>
-                    </div>
+                    )}
                 </div>
 
                 <div className="header-actions d-flex align-items-center gap-3">
