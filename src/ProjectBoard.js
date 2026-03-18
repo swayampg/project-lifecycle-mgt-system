@@ -17,8 +17,6 @@ import {
     getTasksByPhase,
     updateProjectTask,
     deleteProjectTask,
-    uploadFile,
-    deleteFile,
     logProjectAction
 } from './services/db_services';
 import { sendTaskForReview } from './services/db_services';
@@ -53,8 +51,7 @@ const ProjectBoard = () => {
     const [newDeadline, setNewDeadline] = useState('');
     const [newStatus, setNewStatus] = useState('');
     const [newPriority, setNewPriority] = useState('');
-    const [newMedia, setNewMedia] = useState({ files: [] });
-    const [pendingFiles, setPendingFiles] = useState([]);
+    const [newTaskComment, setNewTaskComment] = useState('');
 
     useEffect(() => {
         if (projectId) {
@@ -288,54 +285,8 @@ const ProjectBoard = () => {
         setNewDeadline('');
         setNewStatus('In Progress');
         setNewPriority('Medium');
-        setNewMedia({ files: [] });
-        setPendingFiles([]);
+        setNewTaskComment('');
         setIsAddTaskModalOpen(true);
-    };
-
-    const handleFileChange = (e) => {
-        const files = Array.from(e.target.files);
-        setPendingFiles(prev => [...prev, ...files]);
-
-        files.forEach(file => {
-            const url = URL.createObjectURL(file);
-            const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
-            setNewMedia(prev => ({
-                ...prev,
-                files: [...(prev.files || []), {
-                    url: url,
-                    name: file.name,
-                    type: fileType,
-                    isNew: true
-                }]
-            }));
-        });
-    };
-
-    const removeMedia = async (index, isNew) => {
-        const fileToRemove = newMedia.files[index];
-        
-        if (isNew) {
-            // Remove from pending files
-            setPendingFiles(prev => prev.filter(f => f.name !== fileToRemove.name));
-        } else if (fileToRemove.url) {
-            // If it's an existing file, attempt to delete from Storage
-            try {
-                const decodedUrl = decodeURIComponent(fileToRemove.url);
-                const pathStart = decodedUrl.indexOf('/o/') + 3;
-                const pathEnd = decodedUrl.indexOf('?');
-                const storagePath = decodedUrl.substring(pathStart, pathEnd);
-                await deleteFile(storagePath);
-                console.log("Existing media file deleted from storage.");
-            } catch (err) {
-                console.warn("Failed to delete existing media from storage:", err);
-            }
-        }
-
-        setNewMedia(prev => ({
-            ...prev,
-            files: prev.files.filter((_, i) => i !== index)
-        }));
     };
 
     const handleAddTask = async (e) => {
@@ -352,7 +303,7 @@ const ProjectBoard = () => {
                 deadline: newDeadline,
                 status: newStatus,
                 priority: newPriority,
-                media: { files: [] },
+                taskComment: newTaskComment,
                 phaseId: currentPhaseId,
                 completed: false,
                 reviewStatus: null
@@ -442,52 +393,15 @@ const ProjectBoard = () => {
         setNewDeadline(task.deadline || '');
         setNewStatus(task.status || '');
         setNewPriority(task.priority || '');
-        let normalizedMedia = task.media || { files: [] };
-        if (!normalizedMedia.files && (normalizedMedia.photos || normalizedMedia.videos)) {
-            normalizedMedia = {
-                files: [
-                    ...(normalizedMedia.photos || []).map(url => ({ url, type: 'photo' })),
-                    ...(normalizedMedia.videos || []).map(url => ({ url, type: 'video' }))
-                ]
-            };
-        }
-        setNewMedia(normalizedMedia);
+        setNewTaskComment(task.taskComment || '');
         setIsViewTaskModalOpen(true);
     };
 
     const handleSaveTask = async (e) => {
         e.preventDefault();
         setIsUpdating(true);
-        const updates = {
-            name: newTaskName,
-            description: newTaskDescription,
-            assignBy: newAssignBy,
-            assignTo: newAssignTo,
-            deadline: newDeadline,
-            status: newStatus,
-            priority: newPriority,
-            media: newMedia
-        };
 
         try {
-            console.log("Saving task details. Pending files:", pendingFiles.length);
-            // Upload pending files if any
-            let finalMedia = newMedia;
-            if (pendingFiles.length > 0) {
-                const uploadedFiles = await Promise.all(pendingFiles.map(async (file, index) => {
-                    // Use index + timestamp for unique path
-                    const path = `tasks/${projectId}/${Date.now()}_${index}_${file.name}`;
-                    console.log(`Uploading file ${index + 1}/${pendingFiles.length}: ${file.name}`);
-                    const url = await uploadFile(file, path);
-                    const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
-                    return { url, name: file.name, type: fileType };
-                }));
-                // Combine existing (non-new) files with newly uploaded ones
-                const existingFiles = (newMedia.files || []).filter(f => !f.isNew);
-                finalMedia = { files: [...existingFiles, ...uploadedFiles] };
-                console.log("All files uploaded successfully.");
-            }
-
             const updates = {
                 name: newTaskName,
                 description: newTaskDescription,
@@ -496,7 +410,7 @@ const ProjectBoard = () => {
                 deadline: newDeadline,
                 status: newStatus,
                 priority: newPriority,
-                media: finalMedia
+                taskComment: newTaskComment
             };
 
             await updateProjectTask(currentTask.id, updates);
@@ -519,7 +433,6 @@ const ProjectBoard = () => {
                 return p;
             }));
             setIsViewTaskModalOpen(false);
-            setPendingFiles([]);
             Swal.fire({
                 title: 'Updated!',
                 text: 'Task updated successfully!',
@@ -559,35 +472,7 @@ const ProjectBoard = () => {
 
         setIsSendingToMentor(true);
 
-        const updatedTask = {
-            ...currentTask,
-            name: newTaskName,
-            description: newTaskDescription,
-            assignBy: newAssignBy,
-            assignTo: newAssignTo,
-            deadline: newDeadline,
-            status: newStatus,
-            priority: newPriority,
-            media: newMedia
-        };
-
         try {
-            console.log("Validating task. Uploading media if needed...");
-            // Upload pending files if any
-            let finalMedia = newMedia;
-            if (pendingFiles.length > 0) {
-                const uploadedFiles = await Promise.all(pendingFiles.map(async (file, index) => {
-                    const path = `tasks/${projectId}/${Date.now()}_${index}_${file.name}`;
-                    console.log(`Uploading evaluation media ${index + 1}/${pendingFiles.length}: ${file.name}`);
-                    const url = await uploadFile(file, path);
-                    const fileType = file.type.startsWith('image/') ? 'photo' : (file.type.startsWith('video/') ? 'video' : 'other');
-                    return { url, name: file.name, type: fileType };
-                }));
-                const existingFiles = (newMedia.files || []).filter(f => !f.isNew);
-                finalMedia = { files: [...existingFiles, ...uploadedFiles] };
-                console.log("Evaluation media uploaded.");
-            }
-
             const taskUpdates = {
                 ...currentTask,
                 name: newTaskName,
@@ -597,7 +482,7 @@ const ProjectBoard = () => {
                 deadline: newDeadline,
                 status: newStatus,
                 priority: newPriority,
-                media: finalMedia,
+                taskComment: newTaskComment,
                 reviewStatus: 'pending',
                 updatedAt: serverTimestamp()
             };
@@ -623,7 +508,6 @@ const ProjectBoard = () => {
             }));
 
             setIsViewTaskModalOpen(false);
-            setPendingFiles([]);
             Swal.fire({
                 title: 'Sent!',
                 text: 'Task sent to mentor for validation!',
@@ -690,7 +574,7 @@ const ProjectBoard = () => {
 
 
     const isTaskAssignedToMe = currentTask?.assignTo === currentUserName;
-    const canValidate = (isMember && isTaskAssignedToMe) || isLeader;
+    const canValidate = ((isMember && isTaskAssignedToMe) || isLeader) && currentTask?.priority === 'High';
 
     return (
         <div className="project-board-container">
@@ -1015,35 +899,17 @@ const ProjectBoard = () => {
                                     </div>
                                 )}
 
-                                {/* Attachments */}
-                                <div className="media-upload-section">
-                                    <label className="fw-bold d-block mb-2">Attachments</label>
-                                    {!isMentor && !(isMember && currentTask.reviewStatus === 'reviewed') && (
-                                        <div className="d-flex gap-2 mb-2">
-                                            <label className="btn btn-outline-secondary btn-sm mb-0 d-flex align-items-center gap-1 cursor-pointer" style={{ borderRadius: '8px', padding: '6px 12px' }}>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
-                                                Add Files
-                                                <input type="file" hidden multiple onChange={handleFileChange} />
-                                            </label>
-                                        </div>
-                                    )}
-                                    <div className="media-previews d-flex flex-wrap gap-2">
-                                        {newMedia.files && newMedia.files.map((file, i) => (
-                                            <div key={i} className="media-thumb">
-                                                {file.type === 'photo' ? (
-                                                    <img src={file.url} alt={file.name} />
-                                                ) : file.type === 'video' ? (
-                                                    <video src={file.url} />
-                                                ) : (
-                                                    <div className="other-file-icon">
-                                                        <Layout size={24} />
-                                                        <span className="file-name-hint">{file.name}</span>
-                                                    </div>
-                                                )}
-                                                {!isMentor && <div className="remove-media-overlay" onClick={() => removeMedia(i)}><X size={12} /></div>}
-                                            </div>
-                                        ))}
-                                    </div>
+                                {/* Comments / External Links */}
+                                <div className="form-field mt-3">
+                                    <label>Student Comments / Links</label>
+                                    <textarea
+                                        value={newTaskComment}
+                                        onChange={(e) => setNewTaskComment(e.target.value)}
+                                        readOnly={isMentor || (isMember && currentTask.reviewStatus === 'reviewed')}
+                                        placeholder="Add comments or links to external files (e.g., Google Drive, GitHub)..."
+                                        rows="3"
+                                        style={{ width: '100%', resize: 'vertical' }}
+                                    ></textarea>
                                 </div>
 
                             </div>

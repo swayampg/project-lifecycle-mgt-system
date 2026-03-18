@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { auth, db } from './firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { updateReviewStatus, sendNotification, updateProjectTask, logProjectAction } from './services/db_services';
-import { FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 import './Reviewtask.css';
 
@@ -10,8 +9,6 @@ import './Reviewtask.css';
 const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
     const [mentorComment, setMentorComment] = useState(review?.mentorComment || '');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [lightboxSrc, setLightboxSrc] = useState(null);
-    const [pdfUrl, setPdfUrl] = useState(null);
 
     if (!show || !review) return null;
 
@@ -90,22 +87,6 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
         }
     };
 
-    // Support both legacy (photos/videos arrays) and new (unified files array) formats
-    let photos = review.media?.photos || [];
-    let videos = review.media?.videos || [];
-    let otherFiles = [];
-
-    if (review.media?.files) {
-        const extraPhotos = review.media.files.filter(f => f.type === 'photo').map(f => f.url);
-        const extraVideos = review.media.files.filter(f => f.type === 'video').map(f => f.url);
-        const extraOthers = review.media.files.filter(f => f.type !== 'photo' && f.type !== 'video');
-
-        photos = [...photos, ...extraPhotos];
-        videos = [...videos, ...extraVideos];
-        otherFiles = extraOthers;
-    }
-
-    const hasMedia = photos.length > 0 || videos.length > 0 || otherFiles.length > 0;
     const isAlreadyReviewed = review.reviewStatus !== 'pending';
 
     const priorityColor =
@@ -117,29 +98,6 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
 
     return (
         <>
-            {/* ── Lightbox ── */}
-            {lightboxSrc && (
-                <div className="review-lightbox" onClick={() => setLightboxSrc(null)}>
-                    <img src={lightboxSrc} alt="preview" onClick={(e) => e.stopPropagation()} />
-                    <span className="review-lightbox-close">✕</span>
-                </div>
-            )}
-
-            {/* ── PDF Viewer Modal ── */}
-            {pdfUrl && (
-                <div className="review-pdf-modal-overlay" onClick={() => setPdfUrl(null)}>
-                    <div className="review-pdf-modal-container" onClick={(e) => e.stopPropagation()}>
-                        <div className="review-pdf-modal-header">
-                            <span>Document Viewer</span>
-                            <button className="review-pdf-close-btn" onClick={() => setPdfUrl(null)}>✕</button>
-                        </div>
-                        <div className="review-pdf-modal-body">
-                            <iframe src={pdfUrl} title="PDF Preview" />
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* ── Blurred Backdrop ── */}
             <div className="review-modal-backdrop" onClick={handleClose} />
 
@@ -201,67 +159,30 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                                 />
                             </div>
                             <div className="review-field">
-                                <label>
-                                    Comments
-                                    {isAlreadyReviewed && (
-                                        <span className="read-only-tag"> (read-only)</span>
-                                    )}
-                                </label>
+                                <label>Student Comments / Links</label>
                                 <textarea
-                                    className={`form-control${isAlreadyReviewed ? '' : ' editable'}`}
-                                    placeholder="Add your feedback or comments for the student..."
-                                    value={mentorComment}
-                                    onChange={(e) => setMentorComment(e.target.value)}
-                                    readOnly={isAlreadyReviewed}
+                                    className="form-control"
+                                    value={review.taskComment || 'No comments or links provided.'}
+                                    readOnly
+                                    style={{ backgroundColor: '#f8f9fa' }}
                                 />
                             </div>
                         </div>
 
-                        <hr className="review-divider" />
-
-                        {/* Attachments */}
-                        <div className="review-field">
-                            <label>Attachments</label>
-                            {!hasMedia ? (
-                                <div className="review-no-attachments">
-                                    No attachments uploaded.
-                                </div>
-                            ) : (
-                                <div className="review-attachments-grid">
-                                    {photos.map((src, i) => (
-                                        <div
-                                            key={`photo-${i}`}
-                                            className="review-photo-thumb"
-                                            onClick={() => setLightboxSrc(src)}
-                                            title="Click to enlarge"
-                                        >
-                                            <img src={src} alt={`attachment-${i}`} />
-                                        </div>
-                                    ))}
-                                    {videos.map((src, i) => (
-                                        <div key={`video-${i}`} className="review-video-thumb">
-                                            <video src={src} controls />
-                                        </div>
-                                    ))}
-                                    {otherFiles.map((file, i) => (
-                                        <div
-                                            key={`other-${i}`}
-                                            className="review-other-file-thumb"
-                                            title={file.name || 'View file'}
-                                            onClick={() => {
-                                                if (file.url && (file.url.includes('application/pdf') || file.name?.toLowerCase().endsWith('.pdf'))) {
-                                                    setPdfUrl(file.url);
-                                                } else {
-                                                    window.open(file.url, '_blank');
-                                                }
-                                            }}
-                                        >
-                                            <FileText size={32} color="#1a4d8c" />
-                                            <span className="review-other-file-name">{file.name || 'File'}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                        <div className="review-field mt-3">
+                            <label>
+                                Mentor Feedback
+                                {isAlreadyReviewed && (
+                                    <span className="read-only-tag"> (read-only)</span>
+                                )}
+                            </label>
+                            <textarea
+                                className={`form-control${isAlreadyReviewed ? '' : ' editable'}`}
+                                placeholder="Add your feedback or comments for the student..."
+                                value={mentorComment}
+                                onChange={(e) => setMentorComment(e.target.value)}
+                                readOnly={isAlreadyReviewed}
+                            />
                         </div>
 
                         {/* Assigned Info */}
