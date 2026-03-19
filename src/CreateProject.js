@@ -166,6 +166,10 @@ const CreateProject = () => {
         await sendInvitation({ proj_id, Name: formData.projectTitle, projectLeader: formData.projectLeader }, member, member.role);
       }
 
+      // 3. Log project creation
+      const { logProjectAction } = await import('./services/db_services');
+      await logProjectAction(proj_id, formData.projectLeader, "Project Created", `Project "${formData.projectTitle}" created by ${formData.projectLeader}`);
+
       await Swal.fire({
         icon: 'success',
         title: 'Project Created Successfully!!',

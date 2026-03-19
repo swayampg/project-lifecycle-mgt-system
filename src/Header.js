@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, Settings, User as UserIcon, History } from 'lucide-react';
+import { Search, Bell, User as UserIcon, History } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { auth, db } from './firebaseConfig';
 
@@ -110,15 +110,28 @@ const Header = () => {
             setNewsIndex(0);
         }
 
-        // Real-time listener for ALL project history logs (Global)
+        // Real-time listener for ALL project history logs (Global fetch + In-memory filter)
+        // This avoids requiring a composite index for where("projId", "==") + orderBy("timestamp")
         const logsQuery = query(
             collection(db, "project_logs"),
             orderBy("timestamp", "desc"),
-            limit(50)
+            limit(100)
         );
+        
         unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
-            const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setProjectLogs(logs);
+            const currentPid = localStorage.getItem('selectedProjectId');
+            const allLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // Filter for current project if we are on a project route
+            if (currentPid && isProjectRoute) {
+                const filtered = allLogs.filter(log => log.projId === currentPid);
+                setProjectLogs(filtered);
+            } else {
+                setProjectLogs([]);
+            }
+        }, (error) => {
+            console.error("Header logs listener error:", error);
+            setProjectLogs([]);
         });
 
         return () => {
@@ -374,11 +387,6 @@ const Header = () => {
                             </span>
                         )}
                     </div>
-                    <Settings
-                        size={20}
-                        className="header-icon cursor-pointer"
-                        title="Settings"
-                    />
                     <History
                         size={20}
                         className="header-icon cursor-pointer"

@@ -490,8 +490,11 @@ const ProjectBoard = () => {
             console.log("Updating task in Firestore...");
             await updateProjectTask(currentTask.id, taskUpdates);
 
-            console.log("Submitting to mentor review...");
+             console.log("Submitting to mentor review...");
             await sendTaskForReview(taskUpdates, projectId);
+
+            // Log the validation request
+            await logProjectAction(projectId, currentUserName, "Task Sent for Validation", `Sent task "${newTaskName}" to mentor for review`);
 
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {
