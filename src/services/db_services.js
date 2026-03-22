@@ -1,6 +1,7 @@
 import { db, storage } from '../firebaseConfig';
 import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, limit, serverTimestamp, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable, deleteObject, listAll } from 'firebase/storage';
+import { sendEmailNotification } from './emailService';
 
 /**
  * Uploads a file to Firebase Storage.
@@ -70,6 +71,22 @@ export const findUserByEmail = async (email) => {
         }
     } catch (error) {
         console.error("Error finding user by email:", error);
+    }
+    return null;
+};
+
+/**
+ * Fetches user data by UID.
+ */
+export const getUserById = async (uid) => {
+    try {
+        const docRef = doc(db, "users", uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return { uid: docSnap.id, ...docSnap.data() };
+        }
+    } catch (error) {
+        console.error("Error fetching user by ID:", error);
     }
     return null;
 };
@@ -198,6 +215,13 @@ export const getUserProjects = async (userUid) => {
  */
 export const createProjectWithTeam = async (formData, userUid, creatorRole = "Project Leader") => {
     try {
+        // Check for duplicate project name
+        const q = query(collection(db, "projects"), where("Name", "==", formData.projectTitle));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            throw new Error("A project with this name already exists. Please choose a different name.");
+        }
+
         const projectRef = await addDoc(collection(db, "projects"), {
             proj_id: "", // Will update after creation
             Name: formData.projectTitle,
@@ -286,6 +310,37 @@ export const addProjectTask = async (taskData) => {
             ...taskData,
             createdAt: serverTimestamp()
         });
+
+        // Trigger Email Notification for Task Assignment
+        try {
+            const trimmedName = taskData.assignTo ? taskData.assignTo.trim() : "";
+            console.log(`Triggering email for task assignment to: "${trimmedName}"`);
+            
+            // Find the user assigned to the task to get their email
+            const usersQ = query(collection(db, "users"), where("fullName", "==", trimmedName));
+            const userSnap = await getDocs(usersQ);
+            
+            if (!userSnap.empty) {
+                const userData = userSnap.docs[0].data();
+                console.log(`Found user email: ${userData.email}`);
+                if (userData.email) {
+                    await sendEmailNotification({
+                        to_email: userData.email,
+                        to_name: userData.fullName,
+                        message_title: "New Task Assigned",
+                        message_body: `You have been assigned a new task: "${taskData.name}". Priority: ${taskData.priority}.`,
+                        project_name: taskData.projectName || "Project"
+                    });
+                } else {
+                    console.warn(`User ${taskData.assignTo} has no email address stored.`);
+                }
+            } else {
+                console.warn(`Could not find user with fullName: ${taskData.assignTo}`);
+            }
+        } catch (emailErr) {
+            console.warn("Could not send assignment email notification:", emailErr);
+        }
+
         return docRef.id;
     } catch (error) {
         console.error("Error adding project task:", error);
@@ -710,6 +765,33 @@ export const updateMemberConsent = async (projId, uid, consent) => {
         const snap = await getDocs(q);
         if (!snap.empty) {
             await updateDoc(snap.docs[0].ref, { consentToDelete: consent });
+
+            // Trigger Email Notification for Consent
+            try {
+                // Get project data to find project leader's email
+                const proj = await getProjectById(projId);
+                const teamQ = query(collection(db, "projectTeam"), where("prjid", "==", projId), where("role", "==", "Project Leader"));
+                const teamSnap = await getDocs(teamQ);
+
+                const member = await getUserById(uid);
+
+                if (proj && !teamSnap.empty && member) {
+                    for (const leaderDoc of teamSnap.docs) {
+                        const leaderData = await getUserById(leaderDoc.data().uid);
+                        if (leaderData && leaderData.email) {
+                            await sendEmailNotification({
+                                to_email: leaderData.email,
+                                to_name: leaderData.fullName,
+                                message_title: "Project Deletion Consent Updated",
+                                message_body: `Team member ${member.fullName} has ${consent ? 'granted' : 'withdrawn'} their consent for deleting the project "${proj.Name}".`,
+                                project_name: proj.Name
+                            });
+                        }
+                    }
+                }
+            } catch (emailErr) {
+                console.warn("Could not send consent email notification:", emailErr);
+            }
         }
     } catch (error) {
         console.error("Error updating consent:", error);
@@ -779,6 +861,32 @@ export const updateReviewStatus = async (reviewId, reviewStatus, mentorComment =
             mentorComment,
             updatedAt: serverTimestamp()
         });
+
+        // Trigger Email Notification for Review
+        try {
+            const reviewSnap = await getDoc(reviewRef);
+            if (reviewSnap.exists()) {
+                const reviewData = reviewSnap.data();
+                // Find the user who was assigned the task (or who submitted it)
+                const usersQ = query(collection(db, "users"), where("fullName", "==", reviewData.assignTo));
+                const userSnap = await getDocs(usersQ);
+
+                if (!userSnap.empty) {
+                    const userData = userSnap.docs[0].data();
+                    if (userData.email) {
+                        await sendEmailNotification({
+                            to_email: userData.email,
+                            to_name: userData.fullName,
+                            message_title: `Task Review: ${reviewStatus === 'reviewed' ? 'Validated' : 'Changes Requested'}`,
+                            message_body: `Your task "${reviewData.taskName}" has been reviewed by the mentor.\n\nStatus: ${reviewStatus}\nComment: ${mentorComment}`,
+                            project_name: reviewData.projectName || "Project"
+                        });
+                    }
+                }
+            }
+        } catch (emailErr) {
+            console.warn("Could not send review email notification:", emailErr);
+        }
     } catch (error) {
         console.error("Error updating review status:", error);
         throw error;

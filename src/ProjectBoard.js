@@ -305,6 +305,7 @@ const ProjectBoard = () => {
                 priority: newPriority,
                 taskComment: newTaskComment,
                 phaseId: currentPhaseId,
+                projectName: project?.Name || "Project",
                 completed: false,
                 reviewStatus: null
             };
