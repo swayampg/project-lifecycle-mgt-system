@@ -932,6 +932,21 @@ export const submitFeedback = async (feedbackData) => {
 };
 
 /**
+ * Fetches all feedback entries from the "feedback" collection.
+ * @returns {Promise<Array>}
+ */
+export const getAllFeedback = async () => {
+    try {
+        const q = query(collection(db, "feedback"), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching feedback:", error);
+        return [];
+    }
+};
+
+/**
  * Updates a project details.
  */
 export const updateProject = async (projId, updates) => {
