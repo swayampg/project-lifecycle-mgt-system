@@ -286,10 +286,16 @@ export const getProjectTeamMembers = async (projId) => {
             const memberData = teamDoc.data();
             const userDoc = await getDoc(doc(db, "users", memberData.uid));
             if (userDoc.exists()) {
+                const userData = userDoc.data();
                 teamMembers.push({
                     uid: memberData.uid,
-                    fullName: userDoc.data().fullName,
+                    fullName: userData.fullName,
                     role: memberData.role,
+                    profilePicture: userData.profilePicture || null,
+                    department: userData.department || '',
+                    enrollmentNo: userData.enrollmentNo || '',
+                    email: userData.email || '',
+                    createdAt: userData.createdAt || null,
                     consentToDelete: memberData.consentToDelete || false
                 });
             }

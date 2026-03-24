@@ -49,6 +49,8 @@ const Home = () => {
     const [editedProjectData, setEditedProjectData] = useState({ Name: '', description: '', projectReport: '', githubRepo: '' });
     const [projectReportFile, setProjectReportFile] = useState(null);
     const [isSavingDetails, setIsSavingDetails] = useState(false);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [selectedMember, setSelectedMember] = useState(null);
 
 
     const fetchData = async (user) => {
@@ -329,6 +331,11 @@ const Home = () => {
             setIsSavingDetails(false);
             setProjectReportFile(null);
         }
+    };
+
+    const openProfileModal = (member) => {
+        setSelectedMember(member);
+        setIsProfileModalOpen(true);
     };
 
     return (
@@ -675,7 +682,11 @@ const Home = () => {
                                     </label>
                                     <div className="team-list-detail border rounded-3 p-2 bg-light mt-1">
                                         {detailsTeamMembers.map((member, index) => (
-                                            <div key={index} className="d-flex justify-content-between align-items-center p-2 border-bottom last-border-none">
+                                            <div 
+                                                key={index} 
+                                                className="d-flex justify-content-between align-items-center p-2 border-bottom last-border-none cursor-pointer hover-bg-light rounded"
+                                                onClick={() => openProfileModal(member)}
+                                            >
                                                 <span className="small fw-semibold">{member.fullName}</span>
                                                 <span className={`badge ${member.role === 'Leader' || member.role === 'Project Leader' ? 'bg-primary' : member.role === 'Mentor' ? 'bg-success' : 'bg-secondary'}`}>
                                                     {member.role}
@@ -708,6 +719,61 @@ const Home = () => {
                                     </button>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Member Profile Modal */}
+                {isProfileModalOpen && selectedMember && (
+                    <div className="modal-overlay profile-popup-overlay">
+                        <div className="modal-content-custom profile-modal">
+                            <div className="modal-header-custom d-flex justify-content-between border-bottom pb-3">
+                                <h5 className="m-0 fw-bold text-primary">Member Profile</h5>
+                                <button className="btn-close-custom bg-transparent border-0" onClick={() => setIsProfileModalOpen(false)}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="modal-body-custom py-4 text-center">
+                                <div className="profile-avatar-container mb-3">
+                                    {selectedMember.profilePicture ? (
+                                        <img src={selectedMember.profilePicture} alt={selectedMember.fullName} className="profile-img-popup" />
+                                    ) : (
+                                        <div className="profile-avatar-placeholder">
+                                            <User size={50} />
+                                        </div>
+                                    )}
+                                </div>
+                                <h4 className="fw-bold mb-1">{selectedMember.fullName}</h4>
+                                <span className={`badge mb-4 ${selectedMember.role === 'Leader' || selectedMember.role === 'Project Leader' ? 'bg-primary' : selectedMember.role === 'Mentor' ? 'bg-success' : 'bg-secondary'}`}>
+                                    {selectedMember.role}
+                                </span>
+
+                                <div className="profile-details-grid text-start">
+                                    <div className="detail-item-popup mb-3">
+                                        <label className="text-muted small fw-bold">EMAIL</label>
+                                        <p className="mb-0">{selectedMember.email || 'N/A'}</p>
+                                    </div>
+                                    <div className="detail-item-popup mb-3">
+                                        <label className="text-muted small fw-bold">DEPARTMENT</label>
+                                        <p className="mb-0">{selectedMember.department || 'N/A'}</p>
+                                    </div>
+                                    <div className="detail-item-popup mb-3">
+                                        <label className="text-muted small fw-bold">ENROLLMENT NO</label>
+                                        <p className="mb-0">{selectedMember.enrollmentNo || 'N/A'}</p>
+                                    </div>
+                                    <div className="detail-item-popup mb-0">
+                                        <label className="text-muted small fw-bold">MEMBER SINCE</label>
+                                        <p className="mb-0">
+                                            {selectedMember.createdAt?.toDate 
+                                                ? selectedMember.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) 
+                                                : 'N/A'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="modal-footer-custom border-top pt-3">
+                                <button className="btn btn-primary w-100" onClick={() => setIsProfileModalOpen(false)}>Close</button>
+                            </div>
                         </div>
                     </div>
                 )}
