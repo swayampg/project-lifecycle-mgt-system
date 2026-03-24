@@ -9,13 +9,14 @@ import './Reviewtask.css';
 const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
     const [mentorComment, setMentorComment] = useState(review?.mentorComment || '');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [pdfUrl, setPdfUrl] = useState(null);
 
     if (!show || !review) return null;
 
     const getRecipientUid = async () => {
         const q = query(
-            collection(db, 'projectMembers'),
-            where('projectId', '==', review.projectId),
+            collection(db, 'projectTeam'),
+            where('prjid', '==', review.projectId),
             where('fullName', '==', review.assignTo)
         );
         const snap = await getDocs(q);
@@ -98,6 +99,21 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
 
     return (
         <>
+            {/* ── PDF Viewer Modal ── */}
+            {pdfUrl && (
+                <div className="review-pdf-modal-overlay" onClick={() => setPdfUrl(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 3000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div className="review-pdf-modal-container" onClick={(e) => e.stopPropagation()} style={{ background: 'white', width: '90%', height: '95%', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <div className="review-pdf-modal-header" style={{ padding: '15px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+                            <span style={{ fontWeight: 600, color: '#1e293b' }}>Document Viewer - {pdfUrl.split('/').pop().split('?')[0]}</span>
+                            <button className="review-pdf-close-btn" onClick={() => setPdfUrl(null)} style={{ border: 'none', background: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>✕</button>
+                        </div>
+                        <div className="review-pdf-modal-body" style={{ flex: 1, position: 'relative' }}>
+                            <iframe src={pdfUrl} title="PDF Preview" style={{ width: '100%', height: '100%', border: 'none' }} />
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ── Blurred Backdrop ── */}
             <div className="review-modal-backdrop" onClick={handleClose} />
 
@@ -168,6 +184,49 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                                 />
                             </div>
                         </div>
+
+                        {/* [NEW] Attachments Section for Review */}
+                        {review.media?.files?.length > 0 && (
+                            <div className="review-field mt-3">
+                                <label>Attachments</label>
+                                <div className="existing-files-grid mt-2" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {review.media.files.map((file, idx) => {
+                                        const isImage = /\.(jpe?g|png|gif|webp)$/i.test(file.name);
+                                        const isPdf = /\.pdf$/i.test(file.name);
+                                        return (
+                                            <div 
+                                                key={idx} 
+                                                onClick={() => {
+                                                    if (isPdf) {
+                                                        setPdfUrl(file.url);
+                                                    } else {
+                                                        window.open(file.url, '_blank');
+                                                    }
+                                                }} 
+                                                style={{ textDecoration: 'none', cursor: 'pointer' }}
+                                            >
+                                                <div className="media-thumb shadow-sm" style={{ width: '80px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #cbd5e1', position: 'relative', background: '#fff' }}>
+                                                    {isImage ? (
+                                                        <img src={file.url} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : isPdf ? (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#fef2f2', fontSize: '9px', textAlign: 'center', padding: '4px', color: '#991b1b' }}>
+                                                            <span style={{ fontSize: '24px', marginBottom: '4px' }}>📕</span>
+                                                            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', fontWeight: 700 }}>{file.name}</div>
+                                                            <div style={{ fontSize: '7px', marginTop: '2px', opacity: 0.7 }}>PDF View</div>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#f8fafc', fontSize: '9px', textAlign: 'center', padding: '4px' }}>
+                                                            <span style={{ fontSize: '24px', marginBottom: '4px' }}>📄</span>
+                                                            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{file.name}</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="review-field mt-3">
                             <label>

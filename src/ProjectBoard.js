@@ -17,6 +17,7 @@ import {
     getTasksByPhase,
     updateProjectTask,
     deleteProjectTask,
+    uploadFile,
     logProjectAction
 } from './services/db_services';
 import { sendTaskForReview } from './services/db_services';
@@ -52,6 +53,8 @@ const ProjectBoard = () => {
     const [newStatus, setNewStatus] = useState('');
     const [newPriority, setNewPriority] = useState('');
     const [newTaskComment, setNewTaskComment] = useState('');
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         if (projectId) {
@@ -286,6 +289,7 @@ const ProjectBoard = () => {
         setNewStatus('In Progress');
         setNewPriority('Medium');
         setNewTaskComment('');
+        setSelectedFiles([]);
         setIsAddTaskModalOpen(true);
     };
 
@@ -307,8 +311,10 @@ const ProjectBoard = () => {
                 phaseId: currentPhaseId,
                 projectName: project?.Name || "Project",
                 completed: false,
-                reviewStatus: null
+                reviewStatus: null,
+                media: { files: [] }
             };
+
 
             const taskId = await addProjectTask(taskData);
 
@@ -317,7 +323,7 @@ const ProjectBoard = () => {
                 logDetails += ` and assigned to ${taskData.assignTo}`;
             }
             await logProjectAction(projectId, currentUserName, "Task Added", logDetails);
-            
+
             const newTask = { id: taskId, ...taskData };
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {
@@ -385,6 +391,10 @@ const ProjectBoard = () => {
     };
 
     const viewTaskDetails = (task, phaseId) => {
+        // Only reset selectedFiles if we're switching to a different task
+        if (!currentTask || currentTask.id !== task.id) {
+            setSelectedFiles([]);
+        }
         setCurrentTask(task);
         setCurrentPhaseId(phaseId);
         setNewTaskName(task.name);
@@ -411,8 +421,26 @@ const ProjectBoard = () => {
                 deadline: newDeadline,
                 status: newStatus,
                 priority: newPriority,
-                taskComment: newTaskComment
+                taskComment: newTaskComment,
+                media: currentTask.media || { files: [] }
             };
+
+            // Handle additional file uploads if any
+            if (selectedFiles.length > 0) {
+                setUploading(true);
+                const uploadPromises = selectedFiles.map(file => {
+                    const filePath = `tasks/${projectId}/${Date.now()}_${file.name}`;
+                    return uploadFile(file, filePath).then(url => ({
+                        name: file.name,
+                        url: url,
+                        path: filePath
+                    }));
+                });
+
+                const uploadedFiles = await Promise.all(uploadPromises);
+                const existingFiles = currentTask.media?.files || [];
+                updates.media = { files: [...existingFiles, ...uploadedFiles] };
+            }
 
             await updateProjectTask(currentTask.id, updates);
 
@@ -434,6 +462,7 @@ const ProjectBoard = () => {
                 return p;
             }));
             setIsViewTaskModalOpen(false);
+            setSelectedFiles([]);
             Swal.fire({
                 title: 'Updated!',
                 text: 'Task updated successfully!',
@@ -445,7 +474,7 @@ const ProjectBoard = () => {
             console.error("Error updating task:", error);
             Swal.fire({
                 title: 'Error',
-                text: 'Failed to update task.',
+                text: error.message || 'Failed to update task.',
                 icon: 'error',
                 confirmButtonColor: '#1a4d8c'
             });
@@ -474,8 +503,7 @@ const ProjectBoard = () => {
         setIsSendingToMentor(true);
 
         try {
-            const taskUpdates = {
-                ...currentTask,
+            const updates = {
                 name: newTaskName,
                 description: newTaskDescription,
                 assignBy: newAssignBy,
@@ -488,10 +516,31 @@ const ProjectBoard = () => {
                 updatedAt: serverTimestamp()
             };
 
-            console.log("Updating task in Firestore...");
-            await updateProjectTask(currentTask.id, taskUpdates);
+            // Handle additional file uploads if any
+            if (selectedFiles.length > 0) {
+                setUploading(true);
+                const uploadPromises = selectedFiles.map(file => {
+                    const filePath = `tasks/${projectId}/${Date.now()}_${file.name}`;
+                    return uploadFile(file, filePath).then(url => ({
+                        name: file.name,
+                        url: url,
+                        path: filePath
+                    }));
+                });
 
-             console.log("Submitting to mentor review...");
+                const uploadedFiles = await Promise.all(uploadPromises);
+                const existingFiles = currentTask.media?.files || [];
+                updates.media = { files: [...existingFiles, ...uploadedFiles] };
+            } else {
+                updates.media = currentTask.media || { files: [] };
+            }
+
+            const taskUpdates = { ...currentTask, ...updates };
+
+            console.log("Updating task in Firestore...");
+            await updateProjectTask(currentTask.id, updates);
+
+            console.log("Submitting to mentor review...");
             await sendTaskForReview(taskUpdates, projectId);
 
             // Log the validation request
@@ -512,6 +561,7 @@ const ProjectBoard = () => {
             }));
 
             setIsViewTaskModalOpen(false);
+            setSelectedFiles([]);
             Swal.fire({
                 title: 'Sent!',
                 text: 'Task sent to mentor for validation!',
@@ -523,12 +573,13 @@ const ProjectBoard = () => {
             console.error("Error sending task for review:", error);
             Swal.fire({
                 title: 'Error',
-                text: 'Failed to send task for review.',
+                text: error.message || 'Failed to send task for review.',
                 icon: 'error',
                 confirmButtonColor: '#1a4d8c'
             });
         } finally {
             setIsSendingToMentor(false);
+            setUploading(false);
         }
     };
 
@@ -794,9 +845,10 @@ const ProjectBoard = () => {
                                         </div>
                                     </div>
                                 </div>
+
                             </div>
                             <div className="add-task-modal-footer">
-                                <button type="submit" className="create-task-btn" disabled={isUpdating}>
+                                <button type="submit" className="create-task-btn" disabled={isUpdating || uploading}>
                                     {isUpdating ? <><span className="spinner-border-custom"></span> Creating...</> : "Create task"}
                                 </button>
                             </div>
@@ -903,6 +955,46 @@ const ProjectBoard = () => {
                                     </div>
                                 )}
 
+                                {/* File Attachments Section */}
+                                <div className="form-field mt-3">
+                                    <label>Attachments</label>
+
+                                    {/* Existing Files */}
+                                    {currentTask.media?.files && currentTask.media.files.length > 0 && (
+                                        <div className="existing-files-grid mb-3">
+                                            {currentTask.media.files.map((file, i) => (
+                                                <div key={i} className="file-attachment-card">
+                                                    <div className="file-info">
+                                                        <span className="file-name" title={file.name}>{file.name}</span>
+                                                    </div>
+                                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="view-file-link">View</a>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Upload New Files */}
+                                    {!(isMentor || (isMember && currentTask.reviewStatus === 'reviewed')) && (
+                                        <>
+                                            <input
+                                                type="file"
+                                                multiple
+                                                onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
+                                                className="form-control"
+                                            />
+                                            {selectedFiles.length > 0 && (
+                                                <div className="selected-files-list mt-2">
+                                                    {selectedFiles.map((file, i) => (
+                                                        <div key={i} className="selected-file-item text-muted small">
+                                                            📎 {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+
                                 {/* Comments / External Links */}
                                 <div className="form-field mt-3">
                                     <label>Student Comments / Links</label>
@@ -930,24 +1022,27 @@ const ProjectBoard = () => {
                                         type="button"
                                         className="validate-task-btn"
                                         onClick={handleValidateTask}
-                                        disabled={isSendingToMentor}
+                                        disabled={isSendingToMentor || uploading}
                                         title="Send this task to the mentor for review"
                                     >
-                                        {isSendingToMentor
-                                            ? <><span className="spinner-border-custom"></span> Sending...</>
+                                        {isSendingToMentor || uploading
+                                            ? <><span className="spinner-border-custom"></span> {uploading ? "Uploading..." : "Sending..."}</>
                                             : <><Send size={14} /> Validate Task</>
                                         }
                                     </button>
                                 )}
 
                                 {!isMentor && !(isMember && currentTask.reviewStatus === 'reviewed') && (
-                                    <button type="submit" className="create-task-btn" disabled={isUpdating}>
-                                        {isUpdating ? <><span className="spinner-border-custom"></span> Saving...</> : "Save Changes"}
+                                    <button type="submit" className="create-task-btn" disabled={isUpdating || uploading}>
+                                        {isUpdating || uploading ? <><span className="spinner-border-custom"></span> {uploading ? "Uploading..." : "Saving..."}</> : "Save Changes"}
                                     </button>
                                 )}
                             </div>
                         </form>
-                        <div className="modal-close-icon" onClick={() => setIsViewTaskModalOpen(false)}><X size={20} /></div>
+                        <div className="modal-close-icon" onClick={() => {
+                            setIsViewTaskModalOpen(false);
+                            setSelectedFiles([]);
+                        }}><X size={20} /></div>
                     </div>
                 </div>
             )}

@@ -29,30 +29,13 @@ export const deleteFile = async (path) => {
 };
 
 export const uploadFile = async (file, path) => {
-    console.log(`Starting upload: ${file.name} to ${path}`);
     try {
         const storageRef = ref(storage, path);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        return new Promise((resolve, reject) => {
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    console.log(`Upload progress for ${file.name}: ${progress.toFixed(2)}%`);
-                },
-                (error) => {
-                    console.error("Error during resumable upload:", error);
-                    reject(error);
-                },
-                async () => {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    console.log(`Upload successful: ${file.name} -> ${downloadURL}`);
-                    resolve(downloadURL);
-                }
-            );
-        });
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        return downloadURL;
     } catch (error) {
-        console.error("Error setting up storage upload:", error);
+        console.error("Error uploading file to storage:", error);
         throw error;
     }
 };
@@ -321,11 +304,11 @@ export const addProjectTask = async (taskData) => {
         try {
             const trimmedName = taskData.assignTo ? taskData.assignTo.trim() : "";
             console.log(`Triggering email for task assignment to: "${trimmedName}"`);
-            
+
             // Find the user assigned to the task to get their email
             const usersQ = query(collection(db, "users"), where("fullName", "==", trimmedName));
             const userSnap = await getDocs(usersQ);
-            
+
             if (!userSnap.empty) {
                 const userData = userSnap.docs[0].data();
                 console.log(`Found user email: ${userData.email}`);
@@ -391,7 +374,7 @@ export const deleteProjectTask = async (taskId) => {
         if (taskSnap.exists()) {
             const taskData = taskSnap.data();
             const mediaFiles = taskData.media?.files || [];
-            
+
             // 2. Delete each file from Storage
             for (const file of mediaFiles) {
                 if (file.url) {
@@ -412,7 +395,7 @@ export const deleteProjectTask = async (taskId) => {
                 }
             }
         }
-        
+
         // 3. Delete Firestore document
         await deleteDoc(doc(db, "Tasks", taskId));
     } catch (error) {
@@ -659,7 +642,7 @@ export const deleteProject = async (projId) => {
             const taskSnap = await getDocs(taskQuery);
             taskDeletePromises = taskSnap.docs.map(d => deleteDoc(d.ref));
         }
-        
+
         const newsQuery = query(collection(db, "news"), where("prjid", "==", projId));
         const newsSnap = await getDocs(newsQuery);
         const newsDeletePromises = newsSnap.docs.map(d => deleteDoc(d.ref));
@@ -672,7 +655,7 @@ export const deleteProject = async (projId) => {
         try {
             const projectReportsRef = ref(storage, `project_reports/${projId}`);
             const taskMediaRef = ref(storage, `tasks/${projId}`);
-            
+
             const cleanupFolder = async (folderRef) => {
                 const list = await listAll(folderRef);
                 const deleteFiles = list.items.map(item => deleteObject(item));
@@ -824,7 +807,8 @@ export const sendTaskForReview = async (task, projectId) => {
             priority: task.priority || '',
             assignTo: task.assignTo || '',
             assignBy: task.assignBy || '',
-            media: task.media || { photos: [], videos: [] },
+            media: task.media || { files: [] },
+            taskComment: task.taskComment || '',
             projectId: projectId,
             reviewStatus: 'pending',
             mentorComment: '',
