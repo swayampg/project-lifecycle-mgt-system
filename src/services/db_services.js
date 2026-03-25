@@ -1,6 +1,5 @@
-import { db, storage } from '../firebaseConfig';
+import { db } from '../firebaseConfig';
 import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, limit, serverTimestamp, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, uploadBytesResumable, deleteObject, listAll } from 'firebase/storage';
 import { sendEmailNotification } from './emailService';
 
 /**
@@ -10,32 +9,49 @@ import { sendEmailNotification } from './emailService';
  * @returns {Promise<string>} Download URL
  */
 /**
- * Deletes a file from Firebase Storage.
+ * Deletes a file from Storage (Cloudinary).
+ * Note: Unsigned deletes from the frontend are restricted by default in Cloudinary.
  */
 export const deleteFile = async (path) => {
     try {
-        const fileRef = ref(storage, path);
-        await deleteObject(fileRef);
-        console.log(`Deleted file from storage: ${path}`);
+        console.log(`Frontend file deletion skipped for Cloudinary URL: ${path}`);
     } catch (error) {
-        // If file doesn't exist, we don't want to crash
-        if (error.code === 'storage/object-not-found') {
-            console.warn(`File not found for deletion: ${path}`);
-        } else {
-            console.error("Error deleting file from storage:", error);
-            throw error;
-        }
+        console.error("Error deleting file:", error);
     }
 };
 
+/**
+ * Uploads a file to Cloudinary.
+ * @param {File} file 
+ * @param {string} path 
+ * @returns {Promise<string>} Download URL
+ */
 export const uploadFile = async (file, path) => {
     try {
-        const storageRef = ref(storage, path);
-        const snapshot = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        return downloadURL;
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", "pms-cloudnary");
+        
+        // Cloudinary handles folders nicely. We can extract the folder path if provided.
+        const parts = path.split('/');
+        if (parts.length > 1) {
+            formData.append("folder", parts.slice(0, -1).join('/'));
+        }
+
+        // Use 'auto' to support images, pdfs, and other raw files
+        const response = await fetch(`https://api.cloudinary.com/v1_1/dy4acsbhr/auto/upload`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`Cloudinary upload failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.secure_url;
     } catch (error) {
-        console.error("Error uploading file to storage:", error);
+        console.error("Error uploading file to Cloudinary:", error);
         throw error;
     }
 };
@@ -377,21 +393,8 @@ export const deleteProjectTask = async (taskId) => {
 
             // 2. Delete each file from Storage
             for (const file of mediaFiles) {
-                if (file.url) {
-                    try {
-                        // Extract path from URL or use a stored path if available
-                        // Since we store paths in a predictable way: tasks/projectId/filename
-                        // It's safer if we had the path stored, but we can attempt to extract it or
-                        // just use the fact that we know where it lives if we had the projectId.
-                        // For now, if we don't have the path, we might need to parse the URL.
-                        const decodedUrl = decodeURIComponent(file.url);
-                        const pathStart = decodedUrl.indexOf('/o/') + 3;
-                        const pathEnd = decodedUrl.indexOf('?');
-                        const storagePath = decodedUrl.substring(pathStart, pathEnd);
-                        await deleteFile(storagePath);
-                    } catch (err) {
-                        console.warn("Could not delete file from storage during task deletion:", err);
-                    }
+                if (file.url && file.url.includes('cloudinary')) {
+                    await deleteFile(file.url);
                 }
             }
         }
@@ -650,26 +653,6 @@ export const deleteProject = async (projId) => {
         const inviteQuery = query(collection(db, "invitations"), where("prjid", "==", projId));
         const inviteSnap = await getDocs(inviteQuery);
         const inviteDeletePromises = inviteSnap.docs.map(d => deleteDoc(d.ref));
-
-        // Delete Storage Folder
-        try {
-            const projectReportsRef = ref(storage, `project_reports/${projId}`);
-            const taskMediaRef = ref(storage, `tasks/${projId}`);
-
-            const cleanupFolder = async (folderRef) => {
-                const list = await listAll(folderRef);
-                const deleteFiles = list.items.map(item => deleteObject(item));
-                const subFolders = list.prefixes.map(folder => cleanupFolder(folder));
-                await Promise.all([...deleteFiles, ...subFolders]);
-            };
-
-            await Promise.all([
-                cleanupFolder(projectReportsRef).catch(e => console.warn("No project_reports folder to clean")),
-                cleanupFolder(taskMediaRef).catch(e => console.warn("No tasks folder to clean"))
-            ]);
-        } catch (storageErr) {
-            console.warn("Error cleaning up storage for project:", storageErr);
-        }
 
         await Promise.all([
             ...projectDeletePromises,

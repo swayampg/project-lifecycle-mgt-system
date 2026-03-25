@@ -2,13 +2,11 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, OAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB0yOUvC0m_IFYEISWaR1tKhA599EqtqMs",
   authDomain: "project-management-syste-dba4b.firebaseapp.com",
   projectId: "project-management-syste-dba4b",
-  storageBucket: "project-management-syste-dba4b.firebasestorage.app",
   messagingSenderId: "80651715198",
   appId: "1:80651715198:web:4b03ccbbf0eeb144e64e2f"
 };
@@ -19,6 +17,5 @@ const app = initializeApp(firebaseConfig);
 // EXPORT SERVICES AFTER
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 export const appleProvider = new OAuthProvider('apple.com');
