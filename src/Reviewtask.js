@@ -107,8 +107,15 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                             <span style={{ fontWeight: 600, color: '#1e293b' }}>Document Viewer - {pdfUrl.split('/').pop().split('?')[0]}</span>
                             <button className="review-pdf-close-btn" onClick={() => setPdfUrl(null)} style={{ border: 'none', background: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>✕</button>
                         </div>
-                        <div className="review-pdf-modal-body" style={{ flex: 1, position: 'relative' }}>
-                            <iframe src={pdfUrl} title="PDF Preview" style={{ width: '100%', height: '100%', border: 'none' }} />
+                        <div className="review-pdf-modal-body" style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                            <iframe 
+                                src={`https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`} 
+                                title="PDF Preview" 
+                                style={{ width: '100%', height: '100%', border: 'none', flex: 1 }} 
+                            />
+                            <div style={{ padding: '8px', textAlign: 'center', background: '#f1f5f9', fontSize: '12px', color: '#475569' }}>
+                                Can't see the preview? <a href={pdfUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 600 }}>Open in new tab</a>
+                            </div>
                         </div>
                     </div>
                 </div>
