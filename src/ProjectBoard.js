@@ -18,7 +18,8 @@ import {
     updateProjectTask,
     deleteProjectTask,
     uploadFile,
-    logProjectAction
+    logProjectAction,
+    createNotification
 } from './services/db_services';
 import { sendTaskForReview } from './services/db_services';
 import BottomNav from './BottomNav';
@@ -321,6 +322,18 @@ const ProjectBoard = () => {
             let logDetails = `Added task "${taskData.name}"`;
             if (taskData.assignTo) {
                 logDetails += ` and assigned to ${taskData.assignTo}`;
+                
+                // NOTIFICATION: New Assignment
+                const assignedMember = teamMembers.find(m => m.fullName === taskData.assignTo);
+                if (assignedMember && assignedMember.uid !== auth.currentUser?.uid) {
+                    await createNotification(
+                        assignedMember.uid,
+                        "New Task Assigned",
+                        `You have been assigned a new task: "${taskData.name}" by ${currentUserName}`,
+                        "new_assignment",
+                        { projectId, taskId }
+                    );
+                }
             }
             await logProjectAction(projectId, currentUserName, "Task Added", logDetails);
 
@@ -395,6 +408,7 @@ const ProjectBoard = () => {
         if (!currentTask || currentTask.id !== task.id) {
             setSelectedFiles([]);
         }
+        setUploading(false);
         setCurrentTask(task);
         setCurrentPhaseId(phaseId);
         setNewTaskName(task.name);
@@ -445,12 +459,28 @@ const ProjectBoard = () => {
             await updateProjectTask(currentTask.id, updates);
 
             let logDetails = `Updated task "${newTaskName}"`;
+            let notifyNewAssignee = false;
+
             if (currentTask.assignTo !== newAssignTo && newAssignTo) {
                 logDetails += ` and assigned it to ${newAssignTo}`;
+                notifyNewAssignee = true;
             } else if (currentTask.assignTo !== newAssignTo && !newAssignTo) {
                 logDetails += ` and removed assignee`;
             }
             await logProjectAction(projectId, currentUserName, "Task Updated", logDetails);
+
+            if (notifyNewAssignee) {
+                const assignedMember = teamMembers.find(m => m.fullName === newAssignTo);
+                if (assignedMember && assignedMember.uid !== auth.currentUser?.uid) {
+                    await createNotification(
+                        assignedMember.uid,
+                        "Task Reassigned",
+                        `You have been assigned the task: "${newTaskName}" by ${currentUserName}`,
+                        "new_assignment",
+                        { projectId, taskId: currentTask.id }
+                    );
+                }
+            }
 
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {
@@ -479,7 +509,7 @@ const ProjectBoard = () => {
                 confirmButtonColor: '#1a4d8c'
             });
         } finally {
-
+            setUploading(false);
             setIsUpdating(false);
         }
     };
@@ -545,6 +575,20 @@ const ProjectBoard = () => {
 
             // Log the validation request
             await logProjectAction(projectId, currentUserName, "Task Sent for Validation", `Sent task "${newTaskName}" to mentor for review`);
+
+            // NOTIFICATION: Alert the Mentor(s)
+            const mentors = teamMembers.filter(m => m.role === 'Mentor');
+            for (const mentor of mentors) {
+                if (mentor.uid !== auth.currentUser?.uid) {
+                    await createNotification(
+                        mentor.uid,
+                        "Task Ready for Review",
+                        `${currentUserName} has submitted the task "${newTaskName}" for validation.`,
+                        "task_validation",
+                        { projectId, taskId: currentTask.id }
+                    );
+                }
+            }
 
             setPhases(prev => prev.map(p => {
                 if (p.id === currentPhaseId) {

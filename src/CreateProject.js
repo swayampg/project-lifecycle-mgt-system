@@ -183,7 +183,7 @@ const CreateProject = () => {
       Swal.fire({
         icon: 'error',
         title: 'Creation Failed',
-        text: 'Error creating project. Please try again.',
+        text: error.message || 'Error creating project. Please try again.',
       });
       setIsCreating(false); // NEW: Re-enable button if there's an error so they can try again
     }

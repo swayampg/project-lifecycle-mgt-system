@@ -66,7 +66,14 @@ export const findUserByEmail = async (email) => {
         const q = query(collection(db, "users"), where("email", "==", email));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-            return { uid: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+            // Sort in memory to avoid needing a composite index in Firestore
+            const docs = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+            docs.sort((a, b) => {
+                const dateA = a.createdAt?.toMillis() || 0;
+                const dateB = b.createdAt?.toMillis() || 0;
+                return dateB - dateA; // Descending, newest first
+            });
+            return docs[0];
         }
     } catch (error) {
         console.error("Error finding user by email:", error);
@@ -1093,5 +1100,61 @@ export const getProjectLogs = async (projId) => {
     } catch (error) {
         console.error("Error fetching project logs:", error);
         return [];
+    }
+};
+
+/**
+ * Creates a generic user notification.
+ * @param {string} recipientUid 
+ * @param {string} title 
+ * @param {string} message 
+ * @param {string} type - e.g. 'assignment', 'review_status', 'deletion_consent'
+ * @param {Object} linkData - Extra data to help with routing when clicked
+ */
+export const createNotification = async (recipientUid, title, message, type, linkData = null) => {
+    try {
+        await addDoc(collection(db, "notifications"), {
+            recipientUid,
+            title,
+            message,
+            type,
+            linkData,
+            read: false,
+            createdAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error creating notification:", error);
+    }
+};
+
+/**
+ * Marks a notification as read.
+ */
+export const markNotificationAsRead = async (notificationId) => {
+    try {
+        const notifRef = doc(db, "notifications", notificationId);
+        await updateDoc(notifRef, { read: true });
+    } catch (error) {
+        console.error("Error marking notification as read:", error);
+    }
+};
+
+/**
+ * Marks all notifications for a user as read.
+ */
+export const markAllNotificationsAsRead = async (recipientUid) => {
+    try {
+        const q = query(
+            collection(db, "notifications"),
+            where("recipientUid", "==", recipientUid),
+            where("read", "==", false)
+        );
+        const snapshot = await getDocs(q);
+        const batchUpdates = snapshot.docs.map(document => 
+            updateDoc(doc(db, "notifications", document.id), { read: true })
+        );
+        await Promise.all(batchUpdates);
+    } catch (error) {
+        console.error("Error marking all notifications as read:", error);
     }
 };

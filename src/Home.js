@@ -17,7 +17,8 @@ import {
     updateProject,
     getTotalTasksCountByAssignee,
     checkMemberRoleExists,
-    uploadFile
+    uploadFile,
+    createNotification
 } from './services/db_services';
 
 import './Home.css';
@@ -33,6 +34,7 @@ const Home = () => {
 
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
+    const [currentUserName, setCurrentUserName] = useState('');
     const [selectedProjectId, setSelectedProjectId] = useState(localStorage.getItem('selectedProjectId') || null);
 
     // Invitation Modal State
@@ -66,6 +68,7 @@ const Home = () => {
 
             if (userDocSnap.exists()) {
                 const fullName = userDocSnap.data().fullName;
+                setCurrentUserName(fullName);
                 const taskCount = await getTotalTasksCountByAssignee(fullName);
                 setTotalTasksCount(taskCount);
             }
@@ -171,6 +174,20 @@ const Home = () => {
                 await requestProjectDeletion(project.proj_id);
                 // The leader should auto-consent
                 await updateMemberConsent(project.proj_id, currentUser.uid, true);
+
+                // NOTIFICATION: Request consent from all other team members
+                team.forEach(async (member) => {
+                    if (member.uid !== currentUser.uid) {
+                        await createNotification(
+                            member.uid,
+                            "Action Required: Project Deletion",
+                            `Leader ${currentUserName} has requested to delete the project "${project.Name}". Your consent is required.`,
+                            "deletion_consent",
+                            { projectId: project.proj_id }
+                        );
+                    }
+                });
+
                 Swal.fire('Request Sent!', 'Members will see a consent prompt on their dashboard.', 'success');
                 fetchData(currentUser);
             } catch (error) {
@@ -188,9 +205,27 @@ const Home = () => {
                 Swal.fire('Rejected', 'Deletion request has been cancelled.', 'info');
             } else {
                 Swal.fire('Consented', 'Your preference has been recorded.', 'success');
+                
+                // NOTIFICATION: Check if this was the last person to consent
+                const team = await getProjectTeamMembers(project.proj_id);
+                const allConsented = team.every(m => m.consentToDelete);
+
+                if (allConsented) {
+                    const leader = team.find(m => m.role === 'Leader');
+                    if (leader) {
+                        await createNotification(
+                            leader.uid,
+                            "Project Ready for Deletion",
+                            `All members have given their consent to delete the project "${project.Name}". You can now finalize the deletion.`,
+                            "deletion_ready",
+                            { projectId: project.proj_id }
+                        );
+                    }
+                }
             }
             fetchData(currentUser);
         } catch (error) {
+            console.error("Error updating consent:", error);
             Swal.fire('Error', 'Failed to update consent.', 'error');
         }
     };

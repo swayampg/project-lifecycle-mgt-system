@@ -5,7 +5,7 @@ import './Notifications.css';
 import { auth, db } from './firebaseConfig';
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { respondToInvitation } from './services/db_services';
+import { respondToInvitation, markNotificationAsRead, markAllNotificationsAsRead } from './services/db_services';
 import BottomNav from './BottomNav';
 import Header from './Header';
 import { Check, X, Bell } from 'lucide-react';
@@ -83,8 +83,18 @@ const Notifications = () => {
 
     // Filter logic for general notifications
     const filteredNotifs = notifications.filter(n =>
-        filter === 'ALL' ? true : !n.isRead
+        filter === 'ALL' ? true : !n.read
     );
+
+    const handleMarkAsRead = async (id) => {
+        await markNotificationAsRead(id);
+    };
+
+    const handleMarkAllAsRead = async () => {
+        if (userId) {
+            await markAllNotificationsAsRead(userId);
+        }
+    };
 
     return (
         <div className="dashboard-container">
@@ -155,36 +165,52 @@ const Notifications = () => {
                     {/* --- GENERAL NOTIFICATIONS LIST --- */}
                     <div className="notification-list">
                         <h6 className="fw-bold text-muted mb-3">General Activity</h6>
+                        
                         {loading ? (
                             <div className="text-center py-5">
                                 <div className="spinner-border text-primary" role="status">
                                     <span className="visually-hidden">Loading...</span>
                                 </div>
                             </div>
-                        ) : filteredNotifs.length > 0 ? (
-                            filteredNotifs.map((item) => (
-                                <div key={item.id} className="notification-item d-flex align-items-center gap-3 py-3 border-bottom">
-                                    <img
-                                        src={item.senderPhoto || 'https://via.placeholder.com/50'}
-                                        alt="User"
-                                        className="rounded-circle"
-                                        style={{ width: '45px', height: '45px', objectFit: 'cover' }}
-                                    />
-                                    <div className="flex-grow-1">
-                                        <p className="mb-0 small">
-                                            <span className="fw-bold text-dark">{item.senderName}</span> {item.message}
-                                        </p>
-                                        <span className="text-muted" style={{ fontSize: '10px' }}>
-                                            {item.createdAt?.toDate().toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    {!item.isRead && <div className="unread-dot bg-primary rounded-circle" style={{ width: '8px', height: '8px' }}></div>}
-                                </div>
-                            ))
                         ) : (
-                            <div className="text-center py-5 text-muted small">
-                                {invitations.length === 0 ? "You're all caught up! No notifications." : "No general notifications."}
-                            </div>
+                            <>
+                                {filteredNotifs.length > 0 && (
+                                    <div className="mb-3 d-flex justify-content-end">
+                                        <button className="btn btn-link btn-sm text-decoration-none" onClick={handleMarkAllAsRead}>Mark all as read</button>
+                                    </div>
+                                )}
+
+                                {filteredNotifs.length > 0 ? (
+                                    filteredNotifs.map((item) => (
+                                        <div 
+                                            key={item.id} 
+                                            className={`notification-item d-flex align-items-start gap-3 py-3 border-bottom ${!item.read ? 'bg-light-blue' : ''}`}
+                                            onClick={() => !item.read && handleMarkAsRead(item.id)}
+                                            style={{ cursor: 'pointer', transition: 'background 0.2s' }}
+                                        >
+                                            <div className={`notif-icon-circle ${item.type}`}>
+                                                <Bell size={18} />
+                                            </div>
+                                            <div className="flex-grow-1">
+                                                <div className="d-flex justify-content-between">
+                                                    <span className="fw-bold text-dark small">{item.title || "Update"}</span>
+                                                    <span className="text-muted" style={{ fontSize: '10px' }}>
+                                                        {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleString() : 'Just now'}
+                                                    </span>
+                                                </div>
+                                                <p className="mb-0 small text-secondary mt-1">
+                                                    {item.message}
+                                                </p>
+                                            </div>
+                                            {!item.read && <div className="unread-dot bg-primary rounded-circle mt-2" style={{ width: '8px', height: '8px' }}></div>}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-5 text-muted small">
+                                        {invitations.length === 0 ? "You're all caught up! No notifications." : "No general notifications."}
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

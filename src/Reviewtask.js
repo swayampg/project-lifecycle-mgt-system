@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { auth, db } from './firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { updateReviewStatus, sendNotification, updateProjectTask, logProjectAction } from './services/db_services';
+import { updateReviewStatus, createNotification, updateProjectTask, logProjectAction } from './services/db_services';
 import Swal from 'sweetalert2';
 import './Reviewtask.css';
 
@@ -55,15 +55,13 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                         ? `marked your task "${review.taskName}" as reviewed ✅`
                         : `requested changes on your task "${review.taskName}" 🔄${mentorComment ? ` — "${mentorComment}"` : ''}`;
 
-                await sendNotification({
+                await createNotification(
                     recipientUid,
-                    senderName: mentor?.displayName || 'Mentor',
-                    senderPhoto: mentor?.photoURL || '',
+                    actionType === 'reviewed' ? 'Task Approved' : 'Task Changes Requested',
                     message,
-                    type: actionType === 'reviewed' ? 'task_reviewed' : 'changes_requested',
-                    projectId: review.projectId,
-                    taskId: review.taskId,
-                });
+                    actionType === 'reviewed' ? 'task_reviewed' : 'changes_requested',
+                    { projectId: review.projectId, taskId: review.taskId }
+                );
             }
 
             const mentorObj = auth.currentUser;

@@ -15,6 +15,8 @@ const Header = () => {
     const [userData, setUserData] = useState({ fullName: 'User', role: 'Member', email: '', profilePicture: '' });
     const [projectRole, setProjectRole] = useState(null);
     const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
+    const [inviteCount, setInviteCount] = useState(0);
+    const [unreadCount, setUnreadCount] = useState(0);
     const [notificationCount, setNotificationCount] = useState(0);
     const [latestNews, setLatestNews] = useState(null);
     const [allNews, setAllNews] = useState([]);
@@ -64,13 +66,23 @@ const Header = () => {
         getUserProjects(currentUser.uid).then(setUserProjects);
 
         // Real-time listener for invitations
-        const inviteQuery = query(
+        const invQuery = query(
             collection(db, "invitations"),
             where("recipientUid", "==", currentUser.uid),
             where("status", "==", "pending")
         );
-        const unsubscribeInvites = onSnapshot(inviteQuery, (snapshot) => {
-            setNotificationCount(snapshot.size);
+        const unsubscribeInvites = onSnapshot(invQuery, (snapshot) => {
+            setInviteCount(snapshot.size);
+        });
+
+        // Real-time listener for general unread notifications
+        const notificationQuery = query(
+            collection(db, "notifications"),
+            where("recipientUid", "==", currentUser.uid),
+            where("read", "==", false)
+        );
+        const unsubscribeNotifs = onSnapshot(notificationQuery, (snapshot) => {
+            setUnreadCount(snapshot.size);
         });
 
         // 2. PROJECT-SPECIFIC LISTENERS (Run only if a project is selected AND on a project route)
@@ -91,10 +103,7 @@ const Header = () => {
             );
             unsubscribeNews = onSnapshot(newsQuery, { serverTimestamps: 'estimate' }, (snapshot) => {
                 const newsItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                // CRITICAL: Double check prjid in the data to prevent cross-leakage
                 const projectSpecificNews = newsItems.filter(item => item.prjid === selectedProjectId);
-                
                 setAllNews(projectSpecificNews);
                 setNewsIndex(0);
             }, (error) => {
@@ -103,15 +112,12 @@ const Header = () => {
             });
 
         } else {
-            // Clear news state when no project is selected or not on a project route
             setProjectRole(null);
             setLatestNews(null);
             setAllNews([]);
             setNewsIndex(0);
         }
 
-        // Real-time listener for ALL project history logs (Global fetch + In-memory filter)
-        // This avoids requiring a composite index for where("projId", "==") + orderBy("timestamp")
         const logsQuery = query(
             collection(db, "project_logs"),
             orderBy("timestamp", "desc"),
@@ -122,7 +128,6 @@ const Header = () => {
             const currentPid = localStorage.getItem('selectedProjectId');
             const allLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Filter for current project if we are on a project route
             if (currentPid && isProjectRoute) {
                 const filtered = allLogs.filter(log => log.projId === currentPid);
                 setProjectLogs(filtered);
@@ -136,10 +141,16 @@ const Header = () => {
 
         return () => {
             unsubscribeInvites();
+            unsubscribeNotifs();
             unsubscribeNews();
             unsubscribeLogs();
         };
     }, [currentUser, location.pathname]);
+
+    // Recalculate combined count
+    useEffect(() => {
+        setNotificationCount(inviteCount + unreadCount);
+    }, [inviteCount, unreadCount]);
 
     // Auto-refresh news ticker rotation
     useEffect(() => {
