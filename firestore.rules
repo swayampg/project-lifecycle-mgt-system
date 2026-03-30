@@ -29,6 +29,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isUser(userId);
       allow write: if isUser(userId);
+      allow delete: if isAuthenticated() && resource.data.email == request.auth.token.email;
     }
     
     match /projects/{projectId} {

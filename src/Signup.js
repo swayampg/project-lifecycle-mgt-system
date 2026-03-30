@@ -23,6 +23,14 @@ const Signup = () => {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
+            // NEW: Cleanup any orphaned Firestore records with this email (ghost accounts)
+            try {
+                const { cleanupGhostAccounts } = await import('./services/db_services');
+                await cleanupGhostAccounts(email);
+            } catch (cleanupErr) {
+                console.warn("Ghost account cleanup failed:", cleanupErr);
+            }
+
             // 2. Create the User Profile in Firestore
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
@@ -64,6 +72,14 @@ const Signup = () => {
             const userCredential = await signInWithPopup(auth, googleProvider);
             const user = userCredential.user;
 
+            // NEW: Cleanup ghost accounts
+            try {
+                const { cleanupGhostAccounts } = await import('./services/db_services');
+                await cleanupGhostAccounts(user.email);
+            } catch (cleanupErr) {
+                console.warn("Ghost account cleanup failed:", cleanupErr);
+            }
+
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 fullName: user.displayName || "User",
@@ -97,6 +113,14 @@ const Signup = () => {
         try {
             const userCredential = await signInWithPopup(auth, appleProvider);
             const user = userCredential.user;
+
+            // NEW: Cleanup ghost accounts
+            try {
+                const { cleanupGhostAccounts } = await import('./services/db_services');
+                await cleanupGhostAccounts(user.email);
+            } catch (cleanupErr) {
+                console.warn("Ghost account cleanup failed:", cleanupErr);
+            }
 
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,

@@ -1,4 +1,4 @@
-import { db } from '../firebaseConfig';
+import { db, auth } from '../firebaseConfig';
 import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, limit, serverTimestamp, setDoc } from 'firebase/firestore';
 import { sendEmailNotification } from './emailService';
 
@@ -88,6 +88,36 @@ export const getUserById = async (uid) => {
         console.error("Error fetching user by ID:", error);
     }
     return null;
+};
+
+/**
+ * Searches for and deletes any orphaned user documents with the given email.
+ * This handles cases where a user deletes their Auth account manually and re-signs up.
+ * @param {string} email 
+ */
+export const cleanupGhostAccounts = async (email) => {
+    try {
+        const q = query(collection(db, "users"), where("email", "==", email));
+        const querySnapshot = await getDocs(q);
+        
+        for (const userDoc of querySnapshot.docs) {
+            const userId = userDoc.id;
+            // Only delete if it's NOT the current authenticated user (safety check)
+            if (userId !== auth.currentUser?.uid) {
+                console.log(`Cleaning up ghost account for ${email} (UID: ${userId})`);
+                await deleteDoc(doc(db, "users", userId));
+                
+                // Also clean up projectTeam memberships for this ghost UID
+                const teamQ = query(collection(db, "projectTeam"), where("uid", "==", userId));
+                const teamSnapshot = await getDocs(teamQ);
+                for (const teamDoc of teamSnapshot.docs) {
+                    await deleteDoc(teamDoc.ref);
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error cleaning up ghost accounts:", error);
+    }
 };
 
 /**
