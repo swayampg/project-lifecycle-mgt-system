@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ProjectBoard.css';
-import { Plus, Minus, X, Edit2, Check, Layout, Send, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Minus, X, Edit2, Check, Layout, Send, ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { auth, db } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -627,6 +627,132 @@ const ProjectBoard = () => {
         }
     };
 
+    const handleRemoveFile = async (fileToRemove) => {
+        Swal.fire({
+            title: 'Remove File?',
+            text: `Are you sure you want to remove "${fileToRemove.name}"?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#1a4d8c',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, remove it!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const updatedFiles = currentTask.media.files.filter(f => f.url !== fileToRemove.url);
+                    const updates = {
+                        media: { ...currentTask.media, files: updatedFiles }
+                    };
+
+                    await updateProjectTask(currentTask.id, updates);
+
+                    // Update local state
+                    setPhases(prev => prev.map(p => {
+                        if (p.id === currentPhaseId) {
+                            return {
+                                ...p,
+                                tasks: p.tasks.map(t =>
+                                    t.id === currentTask.id
+                                        ? { ...t, ...updates }
+                                        : t
+                                )
+                            };
+                        }
+                        return p;
+                    }));
+
+                    setCurrentTask(prev => ({ ...prev, ...updates }));
+
+                    Swal.fire({
+                        title: 'Removed!',
+                        text: 'File has been removed from the task.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } catch (error) {
+                    console.error("Error removing file:", error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Failed to remove file.',
+                        icon: 'error',
+                        confirmButtonColor: '#1a4d8c'
+                    });
+                }
+            }
+        });
+    };
+
+    const handleLeaderCompleteTask = async (e) => {
+        e.preventDefault();
+        if (!currentTask) return;
+
+        setIsUpdating(true);
+
+        try {
+            const updates = {
+                status: 'Done',
+                completed: true,
+                reviewStatus: 'reviewed',
+                updatedAt: serverTimestamp()
+            };
+
+            await updateProjectTask(currentTask.id, updates);
+
+            // Log action
+            await logProjectAction(projectId, currentUserName, "Task Completed", `Leader marked low/medium priority task "${currentTask.name}" as completed`);
+
+            // Notify assignee
+            if (currentTask.assignTo && currentTask.assignTo !== currentUserName) {
+                const assignedMember = teamMembers.find(m => m.fullName === currentTask.assignTo);
+                if (assignedMember && assignedMember.uid !== auth.currentUser?.uid) {
+                    await createNotification(
+                        assignedMember.uid,
+                        "Task Completed",
+                        `Project Leader ${currentUserName} has marked your task "${currentTask.name}" as completed.`,
+                        "task_validation",
+                        { projectId, taskId: currentTask.id }
+                    );
+                }
+            }
+
+            const taskUpdates = { ...currentTask, ...updates };
+
+            setPhases(prev => prev.map(p => {
+                if (p.id === currentPhaseId) {
+                    return {
+                        ...p,
+                        tasks: p.tasks.map(t =>
+                            t.id === currentTask.id
+                                ? { ...t, ...taskUpdates }
+                                : t
+                        )
+                    };
+                }
+                return p;
+            }));
+
+            setIsViewTaskModalOpen(false);
+            Swal.fire({
+                title: 'Completed!',
+                text: 'Task has been marked as completed!',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } catch (error) {
+            console.error("Error completing task:", error);
+            Swal.fire({
+                title: 'Error',
+                text: error.message || 'Failed to complete task.',
+                icon: 'error',
+                confirmButtonColor: '#1a4d8c'
+            });
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
     const handleDeleteTask = async () => {
         Swal.fire({
             title: 'Delete Task?',
@@ -674,6 +800,7 @@ const ProjectBoard = () => {
 
     const isTaskAssignedToMe = currentTask?.assignTo === currentUserName;
     const canValidate = ((isMember && isTaskAssignedToMe) || isLeader) && currentTask?.priority === 'High';
+    const canLeaderComplete = isLeader && (currentTask?.priority === 'Low' || currentTask?.priority === 'Medium');
 
     return (
         <div className="project-board-container">
@@ -1008,6 +1135,16 @@ const ProjectBoard = () => {
                                         <div className="existing-files-grid mb-3">
                                             {currentTask.media.files.map((file, i) => (
                                                 <div key={i} className="file-attachment-card">
+                                                    {!(isMentor || (isMember && currentTask.reviewStatus === 'reviewed')) && (
+                                                        <button
+                                                            type="button"
+                                                            className="remove-file-btn"
+                                                            onClick={() => handleRemoveFile(file)}
+                                                            title="Remove file"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    )}
                                                     <div className="file-info">
                                                         <span className="file-name" title={file.name}>{file.name}</span>
                                                     </div>
@@ -1024,7 +1161,6 @@ const ProjectBoard = () => {
                                                 type="file"
                                                 multiple
                                                 onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
-                                                className="form-control"
                                             />
                                             {selectedFiles.length > 0 && (
                                                 <div className="selected-files-list mt-2">
@@ -1066,19 +1202,32 @@ const ProjectBoard = () => {
                                         type="button"
                                         className="validate-task-btn"
                                         onClick={handleValidateTask}
-                                        disabled={isSendingToMentor || uploading}
+                                        disabled={isSendingToMentor || isUpdating}
                                         title="Send this task to the mentor for review"
                                     >
-                                        {isSendingToMentor || uploading
+                                        {isSendingToMentor
                                             ? <><span className="spinner-border-custom"></span> {uploading ? "Uploading..." : "Sending..."}</>
                                             : <><Send size={14} /> Validate Task</>
                                         }
                                     </button>
                                 )}
 
+                                {canLeaderComplete && !currentTask.completed && (
+                                    <button
+                                        type="button"
+                                        className="validate-task-btn"
+                                        onClick={handleLeaderCompleteTask}
+                                        disabled={isUpdating}
+                                        title="Mark this task as completed"
+                                        style={{ background: 'linear-gradient(135deg, #28a745, #218838)' }}
+                                    >
+                                        {isUpdating ? <><span className="spinner-border-custom"></span> Processing...</> : <><CheckCircle size={14} /> Complete Task</>}
+                                    </button>
+                                )}
+
                                 {!isMentor && !(isMember && currentTask.reviewStatus === 'reviewed') && (
-                                    <button type="submit" className="create-task-btn" disabled={isUpdating || uploading}>
-                                        {isUpdating || uploading ? <><span className="spinner-border-custom"></span> {uploading ? "Uploading..." : "Saving..."}</> : "Save Changes"}
+                                    <button type="submit" className="create-task-btn" disabled={isUpdating || isSendingToMentor}>
+                                        {isUpdating ? <><span className="spinner-border-custom"></span> {uploading ? "Uploading..." : "Saving..."}</> : "Save Changes"}
                                     </button>
                                 )}
                             </div>
