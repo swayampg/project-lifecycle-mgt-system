@@ -916,7 +916,7 @@ export const sendNotification = async ({ recipientUid, senderName, senderPhoto, 
             type,
             projectId,
             taskId,
-            isRead: false,
+            read: false,
             createdAt: serverTimestamp()
         });
     } catch (error) {
@@ -1146,14 +1146,23 @@ export const markAllNotificationsAsRead = async (recipientUid) => {
     try {
         const q = query(
             collection(db, "notifications"),
-            where("recipientUid", "==", recipientUid),
-            where("read", "==", false)
+            where("recipientUid", "==", recipientUid)
         );
         const snapshot = await getDocs(q);
-        const batchUpdates = snapshot.docs.map(document => 
-            updateDoc(doc(db, "notifications", document.id), { read: true })
-        );
-        await Promise.all(batchUpdates);
+        
+        // Filter unread notifications (handling both 'read' and legacy 'isRead' fields)
+        const batchUpdates = snapshot.docs
+            .filter(docSnap => !docSnap.data().read)
+            .map(document => 
+                updateDoc(doc(db, "notifications", document.id), { 
+                    read: true,
+                    isRead: true // Standardize legacy fields if they exist
+                })
+            );
+
+        if (batchUpdates.length > 0) {
+            await Promise.all(batchUpdates);
+        }
     } catch (error) {
         console.error("Error marking all notifications as read:", error);
     }

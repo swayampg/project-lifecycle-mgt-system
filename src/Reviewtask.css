@@ -37,48 +37,37 @@
     width: 100%;
     max-width: 900px;
     max-height: 92vh;
-
-    /* ✅ FIX 1: overlay scrollbar sits ON TOP of content, no gutter line */
-    overflow-y: overlay;
-    /* Chrome/Edge */
-    overflow-y: auto;
-    /* Fallback for Firefox */
-
-    box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.35);
+    overflow: hidden; /* Fixes background bleeding at rounded corners */
     display: flex;
     flex-direction: column;
+    box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.35);
     animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     pointer-events: all;
-
-    /* ✅ FIX 2: tells browser NOT to reserve a gutter for the scrollbar */
-    scrollbar-gutter: auto;
 }
 
-/* ✅ FIX 3: make the scrollbar invisible when idle, only shows on hover/scroll */
+/* ✅ FIX: Isolates scrollbar to body only to prevent corner artifacts */
 .review-modal-box::-webkit-scrollbar {
-    width: 5px;
+    display: none;
 }
 
-.review-modal-box::-webkit-scrollbar-track {
+.review-modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.review-modal-body::-webkit-scrollbar-track {
     background: transparent;
-    /* ← removes the visible track/line */
 }
 
-.review-modal-box::-webkit-scrollbar-thumb {
-    background: transparent;
-    /* hidden by default */
-    border-radius: 8px;
-    transition: background 0.2s;
+.review-modal-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
 }
 
-/* Only show thumb when user hovers over the modal */
-.review-modal-box:hover::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+.review-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
-.review-modal-box:hover::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
-}
+
 
 /* ══════════════════════════════════════════
    HEADER
@@ -86,15 +75,13 @@
 .review-modal-header {
     background: linear-gradient(135deg, #1a3f72 0%, #2d6cc0 100%);
     color: white;
-    padding: 20px 28px;
+    padding: 22px 32px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 10;
     border-radius: 24px 24px 0 0;
     flex-shrink: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .review-modal-header h5 {
@@ -129,11 +116,12 @@
    BODY
 ══════════════════════════════════════════ */
 .review-modal-body {
-    padding: 28px 32px;
+    padding: 32px 36px;
     display: flex;
     flex-direction: column;
-    gap: 22px;
+    gap: 24px;
     flex: 1;
+    overflow-y: auto;
 }
 
 /* ── Top row: Title (wide) | Status | Priority ── */
@@ -249,9 +237,11 @@
    ASSIGN INFO
 ══════════════════════════════════════════ */
 .review-assign-info {
-    font-size: 12px;
-    color: #6b7280;
-    padding-top: 4px;
+    font-size: 13px;
+    color: #94a3b8;
+    padding-top: 12px;
+    border-top: 1px dashed #e2e8f0;
+    margin-top: 10px;
 }
 
 /* ══════════════════════════════════════════

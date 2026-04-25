@@ -415,4 +415,15 @@
 
 .hover-bg-light:hover {
     background-color: #f1f5f9 !important;
+}
+
+/* Fix for the half-line issue in file inputs and overall consistency */
+.detail-section .form-control {
+    height: auto;
+    padding: 8px 12px;
+    line-height: 1.5;
+}
+
+.detail-section textarea.form-control {
+    min-height: 100px;
 }

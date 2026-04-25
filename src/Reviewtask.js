@@ -106,10 +106,10 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                             <button className="review-pdf-close-btn" onClick={() => setPdfUrl(null)} style={{ border: 'none', background: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>✕</button>
                         </div>
                         <div className="review-pdf-modal-body" style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
-                            <iframe 
-                                src={`https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`} 
-                                title="PDF Preview" 
-                                style={{ width: '100%', height: '100%', border: 'none', flex: 1 }} 
+                            <iframe
+                                src={`https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`}
+                                title="PDF Preview"
+                                style={{ width: '100%', height: '100%', border: 'none', flex: 1 }}
                             />
                             <div style={{ padding: '8px', textAlign: 'center', background: '#f1f5f9', fontSize: '12px', color: '#475569' }}>
                                 Can't see the preview? <a href={pdfUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 600 }}>Open in new tab</a>
@@ -150,12 +150,32 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                             </div>
                             <div className="review-field">
                                 <label>Status <span className="required-star">*</span></label>
-                                <input
-                                    type="text"
+                                <select
                                     className="form-control"
                                     value={review.status}
-                                    readOnly
-                                />
+                                    onChange={async (e) => {
+                                        const newStatus = e.target.value;
+                                        try {
+                                            await updateProjectTask(review.taskId, { status: newStatus });
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'Status Updated',
+                                                toast: true,
+                                                position: 'top-end',
+                                                timer: 2000,
+                                                showConfirmButton: false
+                                            });
+                                            // Refresh local view if needed, or rely on parent update
+                                        } catch (err) {
+                                            console.error("Error updating task status:", err);
+                                        }
+                                    }}
+                                >
+                                    <option value="To Do">To Do</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Review">Review</option>
+                                    <option value="Done">Done</option>
+                                </select>
                             </div>
                             <div className="review-field">
                                 <label>Priority <span className="required-star">*</span></label>
@@ -199,15 +219,15 @@ const ReviewTask = ({ show, handleClose, review, onReviewComplete }) => {
                                         const isImage = /\.(jpe?g|png|gif|webp)$/i.test(file.name);
                                         const isPdf = /\.pdf$/i.test(file.name);
                                         return (
-                                            <div 
-                                                key={idx} 
+                                            <div
+                                                key={idx}
                                                 onClick={() => {
                                                     if (isPdf) {
                                                         setPdfUrl(file.url);
                                                     } else {
                                                         window.open(file.url, '_blank');
                                                     }
-                                                }} 
+                                                }}
                                                 style={{ textDecoration: 'none', cursor: 'pointer' }}
                                             >
                                                 <div className="media-thumb shadow-sm" style={{ width: '80px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #cbd5e1', position: 'relative', background: '#fff' }}>

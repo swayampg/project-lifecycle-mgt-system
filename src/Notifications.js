@@ -93,6 +93,15 @@ const Notifications = () => {
     const handleMarkAllAsRead = async () => {
         if (userId) {
             await markAllNotificationsAsRead(userId);
+            // Add visual feedback
+            Swal.fire({
+                icon: 'success',
+                title: 'All caught up!',
+                toast: true,
+                position: 'top-end',
+                timer: 2000,
+                showConfirmButton: false
+            });
         }
     };
 

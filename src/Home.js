@@ -608,7 +608,7 @@ const Home = () => {
                                     {isEditingDetails ? (
                                         <input
                                             type="text"
-                                            className="form-control"
+                                            className="form-control border-primary-subtle shadow-sm"
                                             value={editedProjectData.Name}
                                             onChange={(e) => setEditedProjectData({ ...editedProjectData, Name: e.target.value })}
                                         />
@@ -640,17 +640,17 @@ const Home = () => {
                                     {isEditingDetails ? (
                                         <input
                                             type="file"
-                                            className="form-control"
+                                            className="form-control border-primary-subtle shadow-sm w-100"
                                             accept="application/pdf"
                                             onChange={(e) => setProjectReportFile(e.target.files[0])}
                                         />
                                     ) : (
                                         projectForDetails.projectReport ? (
-                                            <a href={projectForDetails.projectReport} target="_blank" rel="noopener noreferrer" className="text-primary text-break">
-                                                View Report
+                                            <a href={projectForDetails.projectReport} target="_blank" rel="noopener noreferrer" className="text-primary fw-bold text-decoration-none d-flex align-items-center gap-2">
+                                                <FileText size={16} /> View Project Report
                                             </a>
                                         ) : (
-                                            <p className="text-muted">No report provided.</p>
+                                            <p className="text-muted small mb-0">No report uploaded yet.</p>
                                         )
                                     )}
                                 </div>
@@ -662,7 +662,7 @@ const Home = () => {
                                     {isEditingDetails ? (
                                         <input
                                             type="text"
-                                            className="form-control"
+                                            className="form-control border-primary-subtle shadow-sm"
                                             placeholder="GitHub repository link..."
                                             value={editedProjectData.githubRepo}
                                             onChange={(e) => setEditedProjectData({ ...editedProjectData, githubRepo: e.target.value })}
