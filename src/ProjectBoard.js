@@ -1042,14 +1042,14 @@ const ProjectBoard = () => {
                                     <div className="grid-column">
                                         <div className="form-field">
                                             <label>Title <span className="required-star">*</span></label>
-                                            <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus readOnly={isMentor || (isMember && currentTask.reviewStatus === 'reviewed')} />
+                                            <input type="text" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} required autoFocus readOnly={isMentor || (isMember && (!isTaskAssignedToMe || currentTask.reviewStatus === 'reviewed'))} />
                                         </div>
                                         <div className="form-field">
                                             <label>Description</label>
                                             <textarea
                                                 value={newTaskDescription}
                                                 onChange={(e) => setNewTaskDescription(e.target.value)}
-                                                readOnly={isMentor || (isMember && currentTask.reviewStatus === 'reviewed')}
+                                                readOnly={isMentor || (isMember && (!isTaskAssignedToMe || currentTask.reviewStatus === 'reviewed'))}
                                             ></textarea>
                                         </div>
                                     </div>
@@ -1079,7 +1079,7 @@ const ProjectBoard = () => {
                                     <div className="grid-column">
                                         <div className="form-field">
                                             <label>Assign to</label>
-                                            <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required disabled={isMentor || (isMember && currentTask.reviewStatus === 'reviewed')}>
+                                            <select value={newAssignTo} onChange={(e) => setNewAssignTo(e.target.value)} required disabled={isMentor || (isMember && (!isTaskAssignedToMe || currentTask.reviewStatus === 'reviewed'))}>
                                                 <option value="">Select Member</option>
                                                 {teamMembers.map(member => (
                                                     <option key={member.uid} value={member.fullName}>
@@ -1090,7 +1090,7 @@ const ProjectBoard = () => {
                                         </div>
                                         <div className="form-field">
                                             <label>Status <span className="required-star">*</span></label>
-                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required disabled={isMentor || (isMember && currentTask.reviewStatus === 'reviewed')}>
+                                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required disabled={isMentor || (isMember && (!isTaskAssignedToMe || currentTask.reviewStatus === 'reviewed'))}>
                                                 <option value=""></option>
                                                 <option value="To Do">To Do</option>
                                                 <option value="In Progress">In Progress</option>
@@ -1135,7 +1135,7 @@ const ProjectBoard = () => {
                                         <div className="existing-files-grid mb-3">
                                             {currentTask.media.files.map((file, i) => (
                                                 <div key={i} className="file-attachment-card">
-                                                    {!(isMentor || (isMember && currentTask.reviewStatus === 'reviewed')) && (
+                                                    {!(isMentor || (isMember && (!isTaskAssignedToMe || currentTask.reviewStatus === 'reviewed'))) && (
                                                         <button
                                                             type="button"
                                                             className="remove-file-btn"
@@ -1155,7 +1155,7 @@ const ProjectBoard = () => {
                                     )}
 
                                     {/* Upload New Files */}
-                                    {!(isMentor || (isMember && currentTask.reviewStatus === 'reviewed')) && (
+                                    {!(isMentor || (isMember && (!isTaskAssignedToMe || currentTask.reviewStatus === 'reviewed'))) && (
                                         <>
                                             <input
                                                 type="file"
@@ -1181,7 +1181,7 @@ const ProjectBoard = () => {
                                     <textarea
                                         value={newTaskComment}
                                         onChange={(e) => setNewTaskComment(e.target.value)}
-                                        readOnly={isMentor || (isMember && currentTask.reviewStatus === 'reviewed')}
+                                        readOnly={isMentor || (isMember && (!isTaskAssignedToMe || currentTask.reviewStatus === 'reviewed'))}
                                         placeholder="Add comments or links to external files (e.g., Google Drive, GitHub)..."
                                         rows="3"
                                         style={{ width: '100%', resize: 'vertical' }}
@@ -1225,7 +1225,7 @@ const ProjectBoard = () => {
                                     </button>
                                 )}
 
-                                {!isMentor && !(isMember && currentTask.reviewStatus === 'reviewed') && (
+                                {!isMentor && !(isMember && (!isTaskAssignedToMe || currentTask.reviewStatus === 'reviewed')) && (
                                     <button type="submit" className="create-task-btn" disabled={isUpdating || isSendingToMentor}>
                                         {isUpdating ? <><span className="spinner-border-custom"></span> {uploading ? "Uploading..." : "Saving..."}</> : "Save Changes"}
                                     </button>
